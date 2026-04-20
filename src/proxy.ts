@@ -22,7 +22,7 @@ const protectedPaths = [
   "/onboarding",
 ];
 
-export default function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // 1. Check if the current path is protected
@@ -45,9 +45,7 @@ export default function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 4. Proxy the session: In a more advanced "proxy" pattern, 
-  // you might verify the session here, but for performance 
-  // we let it pass and let the page handle deep verification.
+  // 4. Session exists, allow through
   return NextResponse.next();
 }
 
