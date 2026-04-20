@@ -22,7 +22,7 @@ const protectedPaths = [
   "/onboarding",
 ];
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // 1. Check if the current path is protected
