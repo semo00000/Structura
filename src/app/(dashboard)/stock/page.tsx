@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Query } from "appwrite";
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { PageTransition } from "@/components/ui/page-transition";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { usePlan } from "@/contexts/PlanContext";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Package,
   Search,
@@ -110,6 +111,7 @@ export default function StockPage() {
 }
 
 function StockContent() {
+  const { userId } = useAuth();
   const [items, setItems] = React.useState<StockItem[]>([]);
   const [search, setSearch] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
@@ -118,16 +120,16 @@ function StockContent() {
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
 
   const loadStock = React.useCallback(async () => {
+    if (!userId) return;
     setIsLoading(true);
     setError(null);
 
     try {
-      const user = await account.get();
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.productsCollectionId,
         [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.limit(200),
         ]
       );
@@ -152,7 +154,7 @@ function StockContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => {

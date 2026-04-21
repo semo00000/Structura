@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePlan, PlanTier } from "@/contexts/PlanContext";
 import { Crown, Check, Zap, Shield, Loader2, Sparkles, Building, UploadCloud, ArrowRight, CreditCard, Info } from "lucide-react";
-import { account, databases, storage, APPWRITE_CONFIG } from "@/lib/appwrite";
+import { databases, storage, APPWRITE_CONFIG } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 import { ID, Query } from "appwrite";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 
 export default function AbonnementPage() {
+  const { userId } = useAuth();
   const { planTier, limits, invoiceCountThisMonth, paymentStatus, pendingTier, refreshPlan } = usePlan();
   const router = useRouter();
   
@@ -48,9 +50,9 @@ export default function AbonnementPage() {
       );
 
       // 2. Get current user's company doc
-      const user = await account.get();
+      if (!userId) throw new Error("Unauthorized");
       const response = await databases.listDocuments(databaseId, companyCollectionId, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
         Query.limit(1)
       ]);
 

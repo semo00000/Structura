@@ -9,7 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/AuthContext";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 
 type ContactItem = {
   id: string;
@@ -55,6 +57,7 @@ function mapContact(document: Models.Document): ContactItem {
 }
 
 export default function ClientsPage() {
+  const { userId } = useAuth();
   const [contacts, setContacts] = React.useState<ContactItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -63,8 +66,8 @@ export default function ClientsPage() {
   const loadClients = React.useCallback(async () => {
     const { databaseId, contactsCollectionId } = APPWRITE_CONFIG;
 
-    if (!databaseId || !contactsCollectionId) {
-      setError("Configuration Appwrite incomplete. Verifiez .env.local.");
+    if (!databaseId || !contactsCollectionId || !userId) {
+      setError("Configuration ou session invalide.");
       setContacts([]);
       setIsLoading(false);
       return;
@@ -74,10 +77,8 @@ export default function ClientsPage() {
     setError(null);
 
     try {
-      const user = await account.get();
-
       const response = await databases.listDocuments(databaseId, contactsCollectionId, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
         Query.equal("type", "client"),
         Query.orderDesc("$createdAt"),
         Query.limit(100),
@@ -90,7 +91,7 @@ export default function ClientsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -142,11 +143,24 @@ export default function ClientsPage() {
       ) : null}
 
       {isLoading ? (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Chargement des clients...
-          </CardContent>
-        </Card>
+        <div className="grid gap-3 md:grid-cols-2">
+          {[1, 2, 3, 4].map((i) => (
+            <Card key={i}>
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-5 w-12" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Skeleton className="h-4 w-48" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="mt-2 h-4 w-40" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       ) : contacts.length === 0 ? (
         <Card className="border-dashed">
           <CardHeader className="text-center">

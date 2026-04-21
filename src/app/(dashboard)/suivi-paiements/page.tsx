@@ -10,8 +10,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-import { APPWRITE_CONFIG, databases, account } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { formatMAD } from "@/lib/validations/document";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,7 +108,11 @@ export default function SuiviPaiementsPage() {
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
 
+  const { userId } = useAuth();
+
   const loadInvoices = React.useCallback(async () => {
+    if (!userId) return;
+
     const { databaseId, documentsCollectionId } = APPWRITE_CONFIG;
 
     if (!databaseId || !documentsCollectionId) {
@@ -120,19 +125,18 @@ export default function SuiviPaiementsPage() {
     setError(null);
 
     try {
-      const user = await account.get();
       const { contactsCollectionId } = APPWRITE_CONFIG;
       if (!contactsCollectionId) return;
 
       const [docsResp, contactsResp] = await Promise.all([
         databases.listDocuments(databaseId, documentsCollectionId, [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.equal("type", "FACTURE"),
           Query.orderDesc("$createdAt"),
           Query.limit(100),
         ]),
         databases.listDocuments(databaseId, contactsCollectionId, [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.limit(100),
         ])
       ]);
@@ -144,7 +148,7 @@ export default function SuiviPaiementsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => {

@@ -6,9 +6,10 @@ import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ID, Query } from "appwrite";
 import { cn } from "@/lib/utils";
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { generateDocumentPDF } from "@/lib/pdf-generator";
 import { usePlan } from "@/contexts/PlanContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 // UI
 import { Button } from "@/components/ui/button";
@@ -279,10 +280,10 @@ function GrandTotals({
 // ═══════════════════════════════════════════════
 export function DocumentEditor({ type }: DocumentEditorProps) {
   const router = useRouter();
+  const { userId } = useAuth();
   const { planTier, checkInvoiceLimit, refreshCount } = usePlan();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
   const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile>(
     fallbackCompanyProfile()
   );
@@ -353,16 +354,6 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
     }
   }
 
-  const resolveCurrentUserId = React.useCallback(async () => {
-    if (currentUserId) {
-      return currentUserId;
-    }
-
-    const user = await account.get();
-    setCurrentUserId(user.$id);
-    return user.$id;
-  }, [currentUserId]);
-
   React.useEffect(() => {
     let isMounted = true;
 
@@ -375,7 +366,10 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
       }
 
       try {
-        const userId = await resolveCurrentUserId();
+        if (!userId) {
+          setIsLoadingData(false);
+          return;
+        }
 
         // Parallel fetch of contacts, products, and company profile
         const [profRes, contactsRes, prodsRes] = await Promise.all([
@@ -411,7 +405,7 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
     return () => {
       isMounted = false;
     };
-  }, [resolveCurrentUserId]);
+  }, [userId, contactType]);
 
   // ─── Submit ────────────────────────────────
   const [successDocument, setSuccessDocument] = React.useState<SuccessDocument | null>(null);
@@ -432,8 +426,9 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
     setIsSubmitting(true);
     setSubmitError(null);
 
+    if (!userId) return;
+
     try {
-      const userId = await resolveCurrentUserId();
       const number = generateDocumentNumber(type);
       const totals = computeDocumentTotals(data.lines);
       const linesWithTotals = data.lines.map((line) => ({

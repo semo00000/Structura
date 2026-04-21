@@ -34,9 +34,10 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. Detection of Appwrite session via cookies (Standard & Legacy)
+  // 2. Detection of Appwrite session via cookies (Standard & Legacy) + Custom Structura Fallback
   const sessionCookie = request.cookies.get(`a_session_${projectId}`)?.value || 
-                        request.cookies.get(`a_session_${projectId}_legacy`)?.value;
+                        request.cookies.get(`a_session_${projectId}_legacy`)?.value ||
+                        request.cookies.get(`structura_session`)?.value;
 
   // 3. Redirect to login if no session is present for protected routes
   if (!sessionCookie) {

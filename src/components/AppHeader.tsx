@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { account } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 import { navigation } from "@/lib/navigation";
 
 function getPageTitle(pathname: string): string {
@@ -44,65 +44,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const pageTitle = getPageTitle(pathname);
   const today = formatDate();
-  const [displayName, setDisplayName] = React.useState("Admin");
-  const [userEmail, setUserEmail] = React.useState("Admin");
-  const [initials, setInitials] = React.useState("AD");
-
-  React.useEffect(() => {
-    let isMounted = true;
-
-    async function loadIdentity() {
-      try {
-        const user = await account.get();
-        if (!isMounted) {
-          return;
-        }
-
-        const prefs =
-          typeof user.prefs === "object" && user.prefs !== null
-            ? (user.prefs as Record<string, unknown>)
-            : {};
-
-        const prefNameCandidate = [
-          prefs.name,
-          prefs.fullName,
-          prefs.displayName,
-        ].find((value) => typeof value === "string" && value.trim().length > 0) as
-          | string
-          | undefined;
-
-        const resolvedEmail = user.email || "Admin";
-        const resolvedName =
-          prefNameCandidate?.trim() || user.name?.trim() || resolvedEmail || "Admin";
-
-        const resolvedInitials =
-          resolvedName
-            .split(/\s+/)
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((part) => part[0]?.toUpperCase())
-            .join("") || "AD";
-
-        setDisplayName(resolvedName);
-        setUserEmail(resolvedEmail);
-        setInitials(resolvedInitials);
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-
-        setDisplayName("Admin");
-        setUserEmail("Admin");
-        setInitials("AD");
-      }
-    }
-
-    void loadIdentity();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  const { displayName, email: userEmail, initials, handleLogout } = useAuth();
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card px-6">
@@ -123,13 +65,13 @@ export function AppHeader() {
         </Badge>
 
         {/* Search */}
-        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground">
+        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground transition-colors duration-200 hover:bg-accent/50 hover:text-foreground">
           <Search className="size-3.5" />
           <span className="sr-only">Rechercher</span>
         </Button>
 
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative size-8 text-muted-foreground">
+        <Button variant="ghost" size="icon" className="relative size-8 text-muted-foreground transition-colors duration-200 hover:bg-accent/50 hover:text-foreground">
           <Bell className="size-3.5" />
           <span className="absolute right-1.5 top-1 size-1.5 rounded-full bg-destructive" />
           <span className="sr-only">Notifications</span>
@@ -142,7 +84,7 @@ export function AppHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <button className="flex items-center gap-2 rounded-md px-2 py-1 text-sm font-medium outline-none transition-colors hover:bg-accent">
+              <button className="flex items-center gap-2 rounded-md px-2 py-1 text-sm font-medium outline-none transition-colors duration-200 hover:bg-accent/80 hover:text-accent-foreground">
                 <Avatar className="size-7">
                   <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground">
                     {initials}
@@ -166,7 +108,7 @@ export function AppHeader() {
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem variant="destructive">
+              <DropdownMenuItem onClick={() => void handleLogout()} variant="destructive" className="cursor-pointer">
                 Se déconnecter
               </DropdownMenuItem>
             </DropdownMenuGroup>

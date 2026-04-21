@@ -4,7 +4,8 @@ import * as React from "react";
 import { Query, type Models } from "appwrite";
 import { AlertCircle, FileText, Files, RefreshCw, TrendingUp } from "lucide-react";
 
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatMAD } from "@/lib/validations/document";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,7 @@ function statusVariant(status: string): "default" | "secondary" | "outline" | "d
 }
 
 export default function DashboardPage() {
+  const { userId } = useAuth();
   const [documents, setDocuments] = React.useState<DashboardDocument[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -102,8 +104,8 @@ export default function DashboardPage() {
   const loadDashboard = React.useCallback(async () => {
     const { databaseId, documentsCollectionId } = APPWRITE_CONFIG;
 
-    if (!databaseId || !documentsCollectionId) {
-      setError("Configuration Appwrite incomplete. Verifiez .env.local.");
+    if (!databaseId || !documentsCollectionId || !userId) {
+      setError("Configuration Appwrite incompl\u00e8te ou session invalide.");
       setIsLoading(false);
       return;
     }
@@ -112,10 +114,8 @@ export default function DashboardPage() {
     setError(null);
 
     try {
-      const user = await account.get();
-
       const response = await databases.listDocuments(databaseId, documentsCollectionId, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
         Query.orderDesc("$createdAt"),
         Query.limit(100),
       ]);

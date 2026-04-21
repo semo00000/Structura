@@ -6,7 +6,8 @@ import { Query, type Models } from "appwrite";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 import { DownloadPDFButton } from "@/components/documents/DownloadPDFButton";
 import { formatMAD } from "@/lib/validations/document";
 import { Card, CardContent } from "@/components/ui/card";
@@ -97,12 +98,15 @@ function mapAvoirDocument(document: Models.Document, contacts: any[]): AvoirList
 }
 
 export default function AvoirsPage() {
+  const { userId } = useAuth();
   const [documents, setDocuments] = React.useState<AvoirListItem[]>([]);
   const [search, setSearch] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const loadAvoirs = React.useCallback(async () => {
+    if (!userId) return;
+
     const { databaseId, documentsCollectionId } = APPWRITE_CONFIG;
 
     if (!databaseId || !documentsCollectionId) {
@@ -115,17 +119,15 @@ export default function AvoirsPage() {
     setError(null);
 
     try {
-      const user = await account.get();
-
       const [docsResp, contactsResp] = await Promise.all([
         databases.listDocuments(databaseId, documentsCollectionId, [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.equal("type", "AVOIR"),
           Query.orderDesc("$createdAt"),
           Query.limit(100),
         ]),
         databases.listDocuments(databaseId, "contacts", [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.equal("type", "CLIENT"),
           Query.limit(100),
         ])
@@ -138,7 +140,7 @@ export default function AvoirsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => {

@@ -11,65 +11,39 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Button } from "@/components/ui/button";
 import { useSidebar, SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from "@/contexts/SidebarContext";
 import { usePlan } from "@/contexts/PlanContext";
-import { account } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 import { ChevronLeft, Crown, Loader2, Lock, LogIn, LogOut } from "lucide-react";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { collapsed, toggle } = useSidebar();
   const { planTier, setShowUpgradeModal } = usePlan();
-  const [userEmail, setUserEmail] = React.useState("Utilisateur");
-  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  
+  // Connect to global auth context
+  const { 
+    email: userEmail, 
+    authState, 
+    handleLogout,
+  } = useAuth();
+  
+  const isAuthenticated = authState === "authed";
+  // We can track local spinning state if we want, or just wait for the authState transition
+  // Since handleLogout is async, we can keep a minor local state just to spin the button
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
+  async function performLogout() {
+    setIsLoggingOut(true);
+    try {
+      await handleLogout();
+    } finally {
+      // The router push will unmount this, but just in case
+      setIsLoggingOut(false);
+    }
+  }
 
   // Plan tier ordering for access checks
   const TIER_ORDER: Record<string, number> = { Starter: 0, Pro: 1, Business: 2 };
   const userTierLevel = TIER_ORDER[planTier] ?? 0;
-
-  React.useEffect(() => {
-    let isMounted = true;
-
-    async function loadCurrentUser() {
-      try {
-        const user = await account.get();
-
-        if (!isMounted) {
-          return;
-        }
-
-        setIsAuthenticated(true);
-        setUserEmail(user.email || "Utilisateur connecte");
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-
-        setIsAuthenticated(false);
-        setUserEmail("Utilisateur");
-      }
-    }
-
-    void loadCurrentUser();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  async function handleLogout() {
-    setIsLoggingOut(true);
-
-    try {
-      await account.deleteSession("current");
-      setIsAuthenticated(false);
-      setUserEmail("Utilisateur");
-      router.replace("/login");
-      router.refresh();
-    } catch {
-      setIsLoggingOut(false);
-    }
-  }
 
   return (
     <aside
@@ -132,7 +106,7 @@ export function AppSidebar() {
                         type="button"
                         onClick={() => setShowUpgradeModal(true)}
                         className={cn(
-                          "group flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150",
+                          "group flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-200",
                           "text-sidebar-foreground/30 hover:bg-sidebar-accent/30 cursor-pointer",
                           collapsed && "justify-center px-0"
                         )}
@@ -170,7 +144,7 @@ export function AppSidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        "group flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-150",
+                        "group flex items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-200",
                         isActive
                           ? "bg-sidebar-accent text-sidebar-accent-foreground"
                           : "text-sidebar-foreground/60 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
@@ -227,7 +201,7 @@ export function AppSidebar() {
                     size="icon-sm"
                     className="w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                     onClick={() => {
-                      void handleLogout();
+                      void performLogout();
                     }}
                     disabled={isLoggingOut}
                   />
@@ -279,9 +253,9 @@ export function AppSidebar() {
               <Button
                 type="button"
                 size="sm"
-                className="mt-3 w-full bg-[#2563EB] text-white hover:bg-[#1D4ED8]"
+                className="mt-3 w-full bg-[#2563EB] text-white transition-colors duration-200 hover:bg-[#1D4ED8]"
                 onClick={() => {
-                  void handleLogout();
+                  void performLogout();
                 }}
                 disabled={isLoggingOut}
               >

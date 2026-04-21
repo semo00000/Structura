@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { ContactModal } from "./ContactModal";
 import type { ContactFormValues } from "@/lib/validations/contact";
-import { APPWRITE_CONFIG, databases, account } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SortKey = "nameOrCompany" | "city" | "$createdAt";
 type SortDir = "asc" | "desc";
@@ -44,6 +45,7 @@ interface ContactsTableProps {
 const PAGE_SIZE = 10;
 
 export function ContactsTable({ filterType, title }: ContactsTableProps) {
+  const { userId } = useAuth();
   const [contacts, setContacts] = useState<ContactDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -55,15 +57,15 @@ export function ContactsTable({ filterType, title }: ContactsTableProps) {
 
   // Fetch contacts
   const fetchContacts = async () => {
+    if (!userId) return;
     setIsLoading(true);
     try {
-      const user = await account.get();
       if (!APPWRITE_CONFIG.contactsCollectionId) return;
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.contactsCollectionId,
         [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.equal("type", filterType),
           Query.limit(100),
         ]
@@ -138,10 +140,10 @@ export function ContactsTable({ filterType, title }: ContactsTableProps) {
   }
 
   async function handleSave(data: ContactFormValues) {
+    if (!userId) return;
     try {
-      const user = await account.get();
       const payload = {
-        userId: user.$id,
+        userId: userId,
         type: data.type,
         category: data.category,
         nameOrCompany: data.companyName ? data.companyName : data.name,

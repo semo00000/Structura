@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PageTransition } from "@/components/ui/page-transition";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 
 type ContactItem = {
   id: string;
@@ -55,12 +56,15 @@ function mapContact(document: Models.Document): ContactItem {
 }
 
 export default function FournisseursPage() {
+  const { userId } = useAuth();
   const [contacts, setContacts] = React.useState<ContactItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   const loadFournisseurs = React.useCallback(async () => {
+    if (!userId) return;
+
     const { databaseId, contactsCollectionId } = APPWRITE_CONFIG;
 
     if (!databaseId || !contactsCollectionId) {
@@ -74,10 +78,8 @@ export default function FournisseursPage() {
     setError(null);
 
     try {
-      const user = await account.get();
-
       const response = await databases.listDocuments(databaseId, contactsCollectionId, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
         Query.equal("type", "fournisseur"),
         Query.orderDesc("$createdAt"),
         Query.limit(100),
@@ -90,7 +92,7 @@ export default function FournisseursPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => {

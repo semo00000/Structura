@@ -7,8 +7,9 @@ import { Loader2, UserPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -80,6 +81,7 @@ export function ContactFormModal({
   contactType,
   onSaved,
 }: ContactFormModalProps) {
+  const { userId } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const { toast } = useToast();
 
@@ -114,11 +116,11 @@ export function ContactFormModal({
       return;
     }
 
+    if (!userId) return;
+
     setIsSubmitting(true);
 
     try {
-      const user = await account.get();
-
       await databases.createDocument(databaseId, contactsCollectionId, ID.unique(), {
         nameOrCompany: values.nameOrCompany,
         email: values.email,
@@ -127,7 +129,7 @@ export function ContactFormModal({
         ice: values.ice,
         category: values.category,
         type: contactType,
-        userId: user.$id,
+        userId: userId,
       });
 
       toast({

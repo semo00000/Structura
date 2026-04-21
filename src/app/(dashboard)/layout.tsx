@@ -7,8 +7,8 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { AppHeader } from "@/components/AppHeader";
 import { SidebarProvider, useSidebar, SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from "@/contexts/SidebarContext";
 import { PlanProvider } from "@/contexts/PlanContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { UpgradeModal } from "@/components/UpgradeModal";
-import { account } from "@/lib/appwrite";
 
 function DashboardShell({ children }: { children: React.ReactNode }) {
   const { collapsed } = useSidebar();
@@ -34,73 +34,14 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const [authState, setAuthState] = React.useState<"checking" | "authed" | "guest">("checking");
-
-  React.useEffect(() => {
-    let isMounted = true;
-
-    async function verifySession() {
-      try {
-        await account.get();
-
-        if (!isMounted) {
-          return;
-        }
-        
-        // Pillar 2: The Onboarding Flow Wall
-        try {
-           const { databaseId, companyCollectionId } = await import("@/lib/appwrite").then(m => m.APPWRITE_CONFIG);
-           const { databases } = await import("@/lib/appwrite");
-           const { Query } = await import("appwrite");
-           const companyDocs = await databases.listDocuments(databaseId, companyCollectionId, [Query.limit(1)]);
-           
-           if (companyDocs.total === 0) {
-             setAuthState("guest");
-             window.location.href = "/onboarding";
-             return;
-           }
-        } catch (e) {
-             console.error("Error checking company docs: ", e);
-             // Assume they need onboarding if failure (or handle gracefully)
-        }
-
-        setAuthState("authed");
-      } catch {
-        if (!isMounted) {
-          return;
-        }
-
-        setAuthState("guest");
-        const nextPath = pathname || "/statistiques";
-        window.location.href = `/login?next=${encodeURIComponent(nextPath)}`;
-      }
-    }
-
-    void verifySession();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [pathname]);
-
-  if (authState !== "authed") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-          <Loader2 className="size-4 animate-spin text-[#2563EB]" />
-          Verification de la session...
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <PlanProvider>
-      <SidebarProvider>
-        <DashboardShell>{children}</DashboardShell>
-      </SidebarProvider>
-      <UpgradeModal />
-    </PlanProvider>
+    <AuthProvider>
+      <PlanProvider>
+        <SidebarProvider>
+          <DashboardShell>{children}</DashboardShell>
+        </SidebarProvider>
+        <UpgradeModal />
+      </PlanProvider>
+    </AuthProvider>
   );
 }

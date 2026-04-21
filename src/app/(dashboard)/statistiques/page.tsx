@@ -11,9 +11,11 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatistiquesChart } from "./StatistiquesChart";
 
 type InvoiceStatus = "DRAFT" | "SENT" | "PENDING" | "PAID" | "CANCELLED";
@@ -90,6 +92,7 @@ const monthNames = [
 ];
 
 export default function StatistiquesPage() {
+  const { userId } = useAuth();
   const [invoices, setInvoices] = React.useState<InvoiceStat[]>([]);
   const [contacts, setContacts] = React.useState<any[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -100,8 +103,8 @@ export default function StatistiquesPage() {
   const loadStats = React.useCallback(async () => {
     const { databaseId, documentsCollectionId } = APPWRITE_CONFIG;
 
-    if (!databaseId || !documentsCollectionId) {
-      setError("Configuration Appwrite incomplete. Verifiez .env.local.");
+    if (!databaseId || !documentsCollectionId || !userId) {
+      setError("Configuration Appwrite incompl\u00e8te ou session invalide.");
       setIsLoading(false);
       return;
     }
@@ -110,19 +113,18 @@ export default function StatistiquesPage() {
     setError(null);
 
     try {
-      const user = await account.get();
       const { contactsCollectionId } = APPWRITE_CONFIG;
       if (!contactsCollectionId) return;
 
       const [response, contactsResponse] = await Promise.all([
         databases.listDocuments(databaseId, documentsCollectionId, [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.equal("type", "FACTURE"),
           Query.orderDesc("$createdAt"),
           Query.limit(100),
         ]),
         databases.listDocuments(databaseId, contactsCollectionId, [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.limit(100),
         ])
       ]);
@@ -260,11 +262,50 @@ export default function StatistiquesPage() {
       ) : null}
 
       {isLoading ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Chargement des statistiques depuis Appwrite...
-          </CardContent>
-        </Card>
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[1, 2, 3].map((i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="size-4 rounded-full" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="mb-1 h-8 w-40" />
+                  <Skeleton className="h-3 w-48" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <div className="grid gap-6 md:grid-cols-7">
+            <Card className="md:col-span-4 lg:col-span-5">
+              <CardHeader>
+                <Skeleton className="mb-2 h-5 w-48" />
+                <Skeleton className="h-4 w-64" />
+              </CardHeader>
+              <CardContent className="pl-2">
+                <Skeleton className="h-[300px] w-full" />
+              </CardContent>
+            </Card>
+            <Card className="flex flex-col md:col-span-3 lg:col-span-2">
+              <CardHeader>
+                <Skeleton className="mb-2 h-5 w-40" />
+                <Skeleton className="h-4 w-48" />
+              </CardHeader>
+              <CardContent className="flex-1 space-y-6">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       ) : (
         <>
           <div className="grid gap-4 md:grid-cols-3">

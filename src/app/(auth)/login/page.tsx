@@ -24,11 +24,6 @@ function toErrorMessage(error: unknown): string {
   return "Connexion impossible. Verifiez vos identifiants puis reessayez.";
 }
 
-function isSilentSessionError(error: unknown): boolean {
-  const message = toErrorMessage(error).toLowerCase();
-  return message.includes("prohibited") || message.includes("active");
-}
-
 function LoginContent() {
   const searchParams = useSearchParams();
 
@@ -36,8 +31,27 @@ function LoginContent() {
   const [password, setPassword] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [checkingSession, setCheckingSession] = React.useState(true);
 
   const nextTarget = searchParams.get("next") || "/statistiques";
+  const safeTarget = nextTarget.startsWith("/") ? nextTarget : "/statistiques";
+
+  // On mount: check if user already has an active session
+  React.useEffect(() => {
+    async function checkExistingSession() {
+      try {
+        await account.get();
+        // If we get here, user IS logged in. Fix the cookie just in case.
+        document.cookie = "structura_session=1; path=/; max-age=2592000";
+        window.location.href = safeTarget;
+      } catch {
+        // No active session — show login form
+        setCheckingSession(false);
+      }
+    }
+
+    checkExistingSession();
+  }, [safeTarget]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -46,20 +60,36 @@ function LoginContent() {
     setIsSubmitting(true);
 
     try {
-      await account.createEmailPasswordSession(email.trim(), password);
+      // First, try to delete any stale session to avoid "session already active" errors
+      try {
+        await account.deleteSession("current");
+      } catch {
+        // No existing session to delete — that's fine
+      }
 
-      const safeTarget = nextTarget.startsWith("/") ? nextTarget : "/statistiques";
+      // Now create the new session
+      await account.createEmailPasswordSession(email.trim(), password);
+      // Manually set a cookie for the proxy to see so we don't get trapped in a redirect loop natively
+      document.cookie = "structura_session=1; path=/; max-age=2592000";
+      
       window.location.href = safeTarget;
     } catch (submitError) {
       setIsSubmitting(false);
-
-      if (isSilentSessionError(submitError)) {
-        window.location.href = "/statistiques";
-        return;
-      }
-
-      setError(toErrorMessage(submitError));
+      const msg = toErrorMessage(submitError);
+      console.error("[Structura Login] Auth error:", msg);
+      setError(msg);
     }
+  }
+
+  // Show loading while checking for existing session
+  if (checkingSession) {
+    return (
+      <Card className="w-full border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+        <CardContent className="flex items-center justify-center py-20">
+          <Loader2 className="size-8 animate-spin text-[#2563EB]" />
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -129,7 +159,7 @@ function LoginContent() {
         </form>
 
         <p className="mt-4 text-sm text-slate-600">
-          Nouveau sur Structura ? {" "}
+          Nouveau sur Structura ?{" "}
           <Link href="/register" className="font-medium text-[#2563EB] hover:text-[#1D4ED8]">
             Creer un compte
           </Link>
@@ -155,4 +185,3 @@ export default function LoginPage() {
     </div>
   );
 }
-

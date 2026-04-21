@@ -6,7 +6,8 @@ import { Query, type Models } from "appwrite";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 
-import { APPWRITE_CONFIG, account, databases } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 
 import { DownloadPDFButton } from "@/components/documents/DownloadPDFButton";
 import { formatMAD } from "@/lib/validations/document";
@@ -82,6 +83,7 @@ function mapDevisDocument(document: Models.Document, contacts: any[]): DevisList
 }
 
 export default function DevisPage() {
+  const { userId } = useAuth();
   const [documents, setDocuments] = React.useState<DevisListItem[]>([]);
   const [search, setSearch] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
@@ -90,8 +92,8 @@ export default function DevisPage() {
   const loadDevis = React.useCallback(async () => {
     const { databaseId, documentsCollectionId } = APPWRITE_CONFIG;
 
-    if (!databaseId || !documentsCollectionId) {
-      setError("Configuration Appwrite incomplète. Vérifiez .env.local.");
+    if (!databaseId || !documentsCollectionId || !userId) {
+      setError("Configuration Appwrite incompl\u00e8te ou session invalide.");
       setIsLoading(false);
       return;
     }
@@ -100,17 +102,15 @@ export default function DevisPage() {
     setError(null);
 
     try {
-      const user = await account.get();
-
       const [docsResp, contactsResp] = await Promise.all([
         databases.listDocuments(databaseId, documentsCollectionId, [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.equal("type", "DEVIS"),
           Query.orderDesc("$createdAt"),
           Query.limit(100),
         ]),
         databases.listDocuments(databaseId, "contacts", [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.limit(100),
         ])
       ]);
@@ -122,7 +122,7 @@ export default function DevisPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   React.useEffect(() => {
     const timeoutId = window.setTimeout(() => {

@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { Query } from "appwrite";
-import { databases, APPWRITE_CONFIG, account } from "@/lib/appwrite";
+import { databases, APPWRITE_CONFIG } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Types ──────────────────────────────────
 export type PlanTier = "Starter" | "Pro" | "Business";
@@ -45,18 +46,22 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [pendingTier, setPendingTier] = useState<string | null>(null);
 
+  const { userId } = useAuth();
   const limits = PLAN_LIMITS[planTier];
   const canCreateInvoice = invoiceCountThisMonth < limits.maxInvoicesPerMonth;
 
   const loadPlanAndCount = useCallback(async () => {
+    if (!userId) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     try {
-      const user = await account.get();
       const { databaseId, companyCollectionId, documentsCollectionId } = APPWRITE_CONFIG;
 
       // Fetch plan tier from company settings
       const companyRes = await databases.listDocuments(databaseId, companyCollectionId, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
         Query.limit(1),
       ]);
 
@@ -78,7 +83,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
       const invoiceRes = await databases.listDocuments(databaseId, documentsCollectionId, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
         Query.equal("type", "FACTURE"),
         Query.greaterThanEqual("$createdAt", startOfMonth),
         Query.lessThanEqual("$createdAt", endOfMonth),
@@ -91,18 +96,18 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   const refreshCount = useCallback(async () => {
+    if (!userId) return;
     try {
-      const user = await account.get();
       const { databaseId, documentsCollectionId } = APPWRITE_CONFIG;
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
 
       const invoiceRes = await databases.listDocuments(databaseId, documentsCollectionId, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
         Query.equal("type", "FACTURE"),
         Query.greaterThanEqual("$createdAt", startOfMonth),
         Query.lessThanEqual("$createdAt", endOfMonth),
@@ -113,7 +118,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       console.error("PlanContext: failed to refresh count", err);
     }
-  }, []);
+  }, [userId]);
 
   const checkInvoiceLimit = useCallback((): boolean => {
     if (invoiceCountThisMonth >= limits.maxInvoicesPerMonth) {

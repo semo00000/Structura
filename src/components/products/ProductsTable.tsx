@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { ProductModal } from "./ProductModal";
 import type { ProductFormValues } from "@/lib/validations/product";
-import { APPWRITE_CONFIG, databases, account } from "@/lib/appwrite";
+import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
+import { useAuth } from "@/contexts/AuthContext";
 import { PageTransition } from "@/components/ui/page-transition";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 
@@ -77,6 +78,7 @@ function StockBadge({ quantity }: { quantity: number }) {
 }
 
 export function ProductsTable() {
+  const { userId } = useAuth();
   const [products, setProducts] = useState<ProductDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -88,14 +90,14 @@ export function ProductsTable() {
 
   // Fetch products
   const fetchProducts = async () => {
+    if (!userId) return;
     setIsLoading(true);
     try {
-      const user = await account.get();
       const response = await databases.listDocuments(
         APPWRITE_CONFIG.databaseId,
         APPWRITE_CONFIG.productsCollectionId,
         [
-          Query.equal("userId", user.$id),
+          Query.equal("userId", userId),
           Query.limit(100),
         ]
       );
@@ -164,10 +166,10 @@ export function ProductsTable() {
   }
 
   async function handleSave(data: ProductFormValues) {
+    if (!userId) return;
     try {
-      const user = await account.get();
       const payload = {
-        userId: user.$id,
+        userId: userId,
         name: data.name,
         reference: data.reference || "",
         sellingPriceHT: data.sellingPriceHT || 0,

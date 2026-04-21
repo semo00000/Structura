@@ -25,11 +25,6 @@ function toErrorMessage(error: unknown): string {
   return "Inscription impossible. Verifiez vos informations puis reessayez.";
 }
 
-function isSilentSessionError(error: unknown): boolean {
-  const message = toErrorMessage(error).toLowerCase();
-  return message.includes("prohibited") || message.includes("active");
-}
-
 export default function RegisterPage() {
   const router = useRouter();
 
@@ -52,32 +47,32 @@ export default function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await account.create(ID.unique(), email.trim(), password, name.trim());
-
+      // Delete any stale session first to avoid "session already active" errors
       try {
-        await account.createEmailPasswordSession(email.trim(), password);
-      } catch (sessionError) {
-        if (isSilentSessionError(sessionError)) {
-          router.push("/statistiques");
-          router.refresh();
-          return;
-        }
-
-        throw sessionError;
+        await account.deleteSession("current");
+      } catch {
+        // No existing session — that's fine
       }
+
+      await account.create(ID.unique(), email.trim(), password, name.trim());
+      await account.createEmailPasswordSession(email.trim(), password);
+
+      // Manually set a cookie for the proxy to see so we don't get trapped in a redirect loop
+      document.cookie = "structura_session=1; path=/; max-age=2592000";
 
       // Pillar 1: Multi-Tenancy - Create the Team
       try {
         await teams.create(ID.unique(), `${name} Business`);
       } catch (teamError) {
         console.error("Failed to create multi-tenant team:", teamError);
-        // Continue anyway; the user is registered. They might need support to fix the team or it can be handled by cloud functions.
+        // Continue anyway; the user is registered.
       }
 
-      router.replace("/statistiques");
-      router.refresh();
+      window.location.href = "/statistiques";
     } catch (submitError) {
-      setError(toErrorMessage(submitError));
+      const msg = toErrorMessage(submitError);
+      console.error("[Structura Register] Error:", msg);
+      setError(msg);
       setIsSubmitting(false);
     }
   }
@@ -179,7 +174,7 @@ export default function RegisterPage() {
             </form>
 
             <p className="mt-4 text-sm text-slate-600">
-              Vous avez deja un compte ? {" "}
+              Vous avez deja un compte ?{" "}
               <Link href="/login" className="font-medium text-[#2563EB] hover:text-[#1D4ED8]">
                 Se connecter
               </Link>
