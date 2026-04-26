@@ -37,13 +37,9 @@ export async function addPayment(data: {
       },
     });
 
-    // Recompute totalPaid for this document
-    const allPayments = await prisma.payment.findMany({
-      where: { documentId: document.id },
-    });
+    // Update totalPaid and status for this document
+    const newTotalPaid = document.totalPaid + data.amount;
 
-    const newTotalPaid = allPayments.reduce((acc: number, p: any) => acc + p.amount, 0);
-    
     let newStatus = document.status;
     if (newTotalPaid >= document.totalTTC) {
       newStatus = "PAID";
@@ -55,7 +51,7 @@ export async function addPayment(data: {
     await prisma.document.update({
       where: { id: document.id },
       data: {
-        totalPaid: newTotalPaid,
+        totalPaid: { increment: data.amount },
         status: newStatus,
       },
     });
