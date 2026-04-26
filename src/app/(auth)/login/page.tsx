@@ -34,7 +34,7 @@ function LoginContent() {
   const [checkingSession, setCheckingSession] = React.useState(true);
 
   const nextTarget = searchParams.get("next") || "/statistiques";
-  const safeTarget = nextTarget.startsWith("/") ? nextTarget : "/statistiques";
+  const safeTarget = nextTarget.startsWith("/") && !nextTarget.startsWith("//") ? nextTarget : "/statistiques";
 
   // On mount: check if user already has an active session
   React.useEffect(() => {
