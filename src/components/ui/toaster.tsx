@@ -8,26 +8,26 @@ import { cn } from "@/lib/utils";
 
 function toastContainerClass(variant: "success" | "error" | "info") {
   if (variant === "success") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-900";
+    return "border-emerald-200/50 bg-emerald-50 text-emerald-900 dark:border-emerald-900/50 dark:bg-emerald-900/20 dark:text-emerald-300";
   }
 
   if (variant === "error") {
-    return "border-red-200 bg-red-50 text-red-900";
+    return "border-red-200/50 bg-red-50 text-red-900 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300";
   }
 
-  return "border-slate-200 bg-white text-slate-900";
+  return "border-border bg-card text-foreground";
 }
 
 function ToastIcon({ variant }: { variant: "success" | "error" | "info" }) {
   if (variant === "success") {
-    return <CheckCircle2 className="mt-0.5 size-4 text-emerald-600" />;
+    return <CheckCircle2 className="mt-0.5 size-4 text-emerald-600 dark:text-emerald-400" />;
   }
 
   if (variant === "error") {
-    return <AlertCircle className="mt-0.5 size-4 text-red-600" />;
+    return <AlertCircle className="mt-0.5 size-4 text-red-600 dark:text-red-400" />;
   }
 
-  return <Info className="mt-0.5 size-4 text-slate-600" />;
+  return <Info className="mt-0.5 size-4 text-muted-foreground" />;
 }
 
 export function Toaster() {

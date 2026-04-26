@@ -20,6 +20,10 @@ const logosBucketId =
   process.env.NEXT_PUBLIC_APPWRITE_LOGOS_BUCKET_ID ?? "logos";
 const receiptsBucketId =
   process.env.NEXT_PUBLIC_APPWRITE_RECEIPTS_BUCKET_ID ?? "payment_receipts";
+const paymentsCollectionId =
+  process.env.NEXT_PUBLIC_APPWRITE_PAYMENTS_COLLECTION_ID ?? "payments";
+const paymentsAuditCollectionId =
+  process.env.NEXT_PUBLIC_APPWRITE_PAYMENTS_AUDIT_COLLECTION_ID ?? "payments_audit";
 
 const client = new Client();
 
@@ -46,6 +50,8 @@ const APPWRITE_CONFIG = {
   productsCollectionId,
   logosBucketId,
   receiptsBucketId,
+  paymentsCollectionId,
+  paymentsAuditCollectionId,
 };
 
 export { client, account, databases, teams, storage, APPWRITE_CONFIG };

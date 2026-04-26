@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm, useFieldArray, useWatch, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ID, Query } from "appwrite";
@@ -37,6 +37,7 @@ import {
   CalendarDays,
   Package,
   AlertCircle,
+  MessageCircle,
 } from "lucide-react";
 
 // Validation
@@ -60,6 +61,8 @@ type DocumentType = "FACTURE" | "DEVIS" | "BON_COMMANDE" | "BON_LIVRAISON" | "AV
 
 interface DocumentEditorProps {
   type: DocumentType;
+  /** When editing an existing document */
+  documentId?: string;
 }
 
 type CompanyProfile = {
@@ -142,7 +145,16 @@ function getContactType(type: DocumentType): "CLIENT" | "FOURNISSEUR" {
   return type === "BON_COMMANDE" ? "FOURNISSEUR" : "CLIENT";
 }
 
-function getNewDocumentTitle(type: DocumentType): string {
+function getNewDocumentTitle(type: DocumentType, isEditing: boolean): string {
+  if (isEditing) {
+    switch (type) {
+      case "FACTURE": return "Modifier Facture";
+      case "BON_COMMANDE": return "Modifier Bon de Commande";
+      case "BON_LIVRAISON": return "Modifier Bon de Livraison";
+      case "AVOIR": return "Modifier Avoir";
+      default: return "Modifier Devis";
+    }
+  }
   switch (type) {
     case "FACTURE": return "Nouvelle Facture";
     case "BON_COMMANDE": return "Nouveau Bon de Commande";
@@ -227,7 +239,7 @@ function LineTotalCell({
   });
 
   return (
-    <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+    <span className="font-mono text-sm font-bold tabular-nums text-[#111827] dark:text-white">
       {formatMAD(totalHT)}
     </span>
   );
@@ -251,23 +263,23 @@ function GrandTotals({
   );
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">Total HT</span>
-        <span className="font-mono text-sm font-medium tabular-nums">
+        <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Total HT</span>
+        <span className="font-mono text-sm font-bold tabular-nums text-[#111827] dark:text-white">
           {formatMAD(totals.totalHT)} DH
         </span>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-sm text-muted-foreground">Total TVA</span>
-        <span className="font-mono text-sm font-medium tabular-nums text-amber-600">
+        <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Total TVA</span>
+        <span className="font-mono text-sm font-bold tabular-nums text-[#111827] dark:text-white">
           {formatMAD(totals.totalTVA)} DH
         </span>
       </div>
-      <Separator />
-      <div className="flex items-center justify-between">
-        <span className="text-base font-semibold text-foreground">Total TTC</span>
-        <span className="font-mono text-lg font-bold tabular-nums text-primary">
+      <Separator className="bg-border" />
+      <div className="flex items-center justify-between rounded-lg bg-[#F9FAFB] dark:bg-muted p-3 border border-border">
+        <span className="text-sm font-black uppercase tracking-widest text-[#111827] dark:text-white">Total TTC</span>
+        <span className="font-mono text-lg font-black tabular-nums text-[#4338CA] dark:text-blue-400">
           {formatMAD(totals.totalTTC)} DH
         </span>
       </div>
@@ -278,8 +290,9 @@ function GrandTotals({
 // ═══════════════════════════════════════════════
 // MAIN DOCUMENT EDITOR COMPONENT
 // ═══════════════════════════════════════════════
-export function DocumentEditor({ type }: DocumentEditorProps) {
+export function DocumentEditor({ type, documentId }: DocumentEditorProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { userId } = useAuth();
   const { planTier, checkInvoiceLimit, refreshCount } = usePlan();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -291,6 +304,8 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
   const [products, setProducts] = React.useState<any[]>([]);
   const [isLoadingData, setIsLoadingData] = React.useState(true);
 
+  const isEditing = Boolean(documentId);
+  const fromDocId = searchParams.get("from");
   const typeLabel = getDocumentLabel(type);
   const TypeIcon = getDocumentIcon(type);
   const contactType = getContactType(type);
@@ -303,6 +318,7 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
     control,
     handleSubmit,
     setValue,
+    reset,
     formState: { errors },
   } = useForm<DocumentFormValues>({
     resolver: zodResolver(documentSchema),
@@ -359,7 +375,7 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
 
     async function loadData() {
       setIsLoadingData(true);
-      const { databaseId, companyCollectionId, contactsCollectionId, productsCollectionId } = APPWRITE_CONFIG;
+      const { databaseId, companyCollectionId, contactsCollectionId, productsCollectionId, documentsCollectionId } = APPWRITE_CONFIG;
       if (!databaseId || !companyCollectionId || !contactsCollectionId || !productsCollectionId) {
         setIsLoadingData(false);
         return;
@@ -393,6 +409,49 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
           setClients(contactsRes.documents);
           setProducts(prodsRes.documents);
         }
+
+        // ─── Load existing document for edit or conversion ───
+        const loadId = documentId || fromDocId;
+        if (loadId && documentsCollectionId && isMounted) {
+          try {
+            const existingDoc = await databases.getDocument(databaseId, documentsCollectionId, loadId);
+            const src = existingDoc as unknown as Record<string, unknown>;
+
+            // Parse lines
+            let parsedLines: DocumentFormValues["lines"] = [{ ...EMPTY_LINE }];
+            const linesJson = typeof src.linesJson === "string" ? src.linesJson : "";
+            if (linesJson) {
+              try {
+                const arr = JSON.parse(linesJson);
+                if (Array.isArray(arr) && arr.length > 0) {
+                  parsedLines = arr.map((l: any) => ({
+                    productId: l.productId || "",
+                    description: l.description || "",
+                    quantity: Number(l.quantity) || 1,
+                    unitPriceHT: Number(l.unitPriceHT) || 0,
+                    tvaRate: Number(l.tvaRate) || 0,
+                    unit: l.unit || "unité",
+                  }));
+                }
+              } catch { /* ignore parse errors */ }
+            }
+
+            const dateVal = typeof src.date === "string" ? src.date.split("T")[0] : today;
+            const dueDateVal = typeof src.dueDate === "string" && src.dueDate ? src.dueDate.split("T")[0] : "";
+
+            reset({
+              type,
+              contactId: typeof src.contactId === "string" ? src.contactId : "",
+              date: fromDocId ? today : dateVal,
+              dueDate: fromDocId ? "" : dueDateVal,
+              notes: typeof src.notes === "string" ? src.notes : "",
+              footer: typeof src.footer === "string" ? src.footer : "Merci pour votre confiance.",
+              lines: parsedLines,
+            });
+          } catch (err) {
+            console.error("Failed to load document for editing:", err);
+          }
+        }
       } catch (err) {
         console.error("Error loading entities", err);
       } finally {
@@ -405,14 +464,14 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
     return () => {
       isMounted = false;
     };
-  }, [userId, contactType]);
+  }, [userId, contactType, documentId, fromDocId, reset, today, type]);
 
   // ─── Submit ────────────────────────────────
   const [successDocument, setSuccessDocument] = React.useState<SuccessDocument | null>(null);
 
   async function onSubmit(data: DocumentFormValues) {
-    // Pillar 4: Invoice limit check for FACTURE type
-    if (type === "FACTURE" && !checkInvoiceLimit()) {
+    // Pillar 4: Invoice limit check for FACTURE type (only for new, not edits)
+    if (type === "FACTURE" && !isEditing && !checkInvoiceLimit()) {
       return; // blocked — upgrade modal shown
     }
 
@@ -429,7 +488,6 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
     if (!userId) return;
 
     try {
-      const number = generateDocumentNumber(type);
       const totals = computeDocumentTotals(data.lines);
       const linesWithTotals = data.lines.map((line) => ({
         description: line.description,
@@ -441,9 +499,6 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
 
       const payload: Record<string, string | number> = {
         type: data.type,
-        number,
-        userId,
-        status: "DRAFT",
         contactId: data.contactId,
         date: data.date,
         notes: data.notes || "",
@@ -451,7 +506,6 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
         totalHT: totals.totalHT,
         totalTVA: totals.totalTVA,
         totalTTC: totals.totalTTC,
-        totalPaid: 0,
       };
 
       if (data.dueDate) {
@@ -463,40 +517,65 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
         linesJson: JSON.stringify(linesWithTotals),
       };
 
-      let createdDocumentId = "";
+      let resultDocId = "";
 
-      try {
-        const createdDocument = await databases.createDocument(
-          databaseId,
-          documentsCollectionId,
-          ID.unique(),
-          payloadWithLinesJson
-        );
-        createdDocumentId = createdDocument.$id;
-      } catch {
-        const createdDocument = await databases.createDocument(
-          databaseId,
-          documentsCollectionId,
-          ID.unique(),
-          payload
-        );
-        createdDocumentId = createdDocument.$id;
+      if (isEditing && documentId) {
+        // ─── UPDATE existing document ───
+        try {
+          await databases.updateDocument(databaseId, documentsCollectionId, documentId, payloadWithLinesJson);
+        } catch {
+          await databases.updateDocument(databaseId, documentsCollectionId, documentId, payload);
+        }
+        resultDocId = documentId;
+
+        // For edits, navigate back to the list
+        router.push(getDocumentListRoute(type));
+        return;
+      } else {
+        // ─── CREATE new document ───
+        const number = generateDocumentNumber(type);
+        const createPayload = {
+          ...payloadWithLinesJson,
+          number,
+          userId,
+          status: "DRAFT",
+          totalPaid: 0,
+        };
+
+        try {
+          const createdDocument = await databases.createDocument(
+            databaseId,
+            documentsCollectionId,
+            ID.unique(),
+            createPayload
+          );
+          resultDocId = createdDocument.$id;
+        } catch {
+          const fallbackPayload = { ...payload, number, userId, status: "DRAFT", totalPaid: 0 };
+          const createdDocument = await databases.createDocument(
+            databaseId,
+            documentsCollectionId,
+            ID.unique(),
+            fallbackPayload
+          );
+          resultDocId = createdDocument.$id;
+        }
+
+        setSuccessDocument({
+          id: resultDocId,
+          type,
+          number,
+          date: new Date(data.date),
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          totalHT: totals.totalHT,
+          totalTVA: totals.totalTVA,
+          totalTTC: totals.totalTTC,
+          notes: data.notes,
+          footer: data.footer,
+          contactId: data.contactId,
+          lines: linesWithTotals,
+        } as any);
       }
-
-      setSuccessDocument({
-        id: createdDocumentId,
-        type,
-        number,
-        date: new Date(data.date),
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        totalHT: totals.totalHT,
-        totalTVA: totals.totalTVA,
-        totalTTC: totals.totalTTC,
-        notes: data.notes,
-        footer: data.footer,
-        contactId: data.contactId,
-        lines: linesWithTotals,
-      } as any);
     } catch {
       setSubmitError("Erreur Appwrite. Vérifiez vos permissions de collection.");
     } finally {
@@ -529,14 +608,14 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
           <FileText className="size-10 text-green-600" />
         </div>
         <div className="text-center">
-          <h2 className="text-2xl font-semibold tracking-tight">{typeLabel} enregistré avec succès !</h2>
+          <h2 className="text-2xl font-semibold tracking-tight text-foreground">{typeLabel} enregistré avec succès !</h2>
           <p className="mt-2 text-muted-foreground">Le document {successDocument.number} a été créé et sauvegardé.</p>
         </div>
         <div className="mt-4 flex items-center gap-4">
-          <Button variant="outline" onClick={() => router.push(getDocumentListRoute(type))}>
+          <Button variant="outline" className="border-border" onClick={() => router.push(getDocumentListRoute(type))}>
             Retour à la liste
           </Button>
-          <Button onClick={handleDownloadPDF} className="gap-2 bg-[#2563EB] hover:bg-[#2563EB]/90">
+          <Button onClick={handleDownloadPDF} className="gap-2 bg-[#4338CA] text-white hover:bg-[#3730A3]">
             Télécharger PDF
           </Button>
         </div>
@@ -566,14 +645,14 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
           <ArrowLeft className="size-4" />
           Retour
         </Button>
-        <Separator orientation="vertical" className="h-6" />
+        <Separator orientation="vertical" className="h-6 bg-border" />
         <div className="flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
-            <TypeIcon className="size-5 text-primary" />
+          <div className="flex size-9 items-center justify-center rounded-md bg-[#4338CA]/10">
+            <TypeIcon className="size-5 text-[#4338CA]" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold tracking-tight">
-              {getNewDocumentTitle(type)}
+            <h1 className="text-lg font-semibold tracking-tight text-foreground">
+              {getNewDocumentTitle(type, isEditing)}
             </h1>
             <p className="text-xs text-muted-foreground">
               Brouillon · {typeLabel} #{getDocumentPrefix(type)}-{new Date().getFullYear()}-XXXX
@@ -581,8 +660,8 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
           </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Badge variant="outline" className="font-mono text-xs">
-            BROUILLON
+          <Badge variant="outline" className="font-mono text-xs border-border text-foreground">
+            {isEditing ? "MODIFICATION" : "BROUILLON"}
           </Badge>
         </div>
       </div>
@@ -697,33 +776,33 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
           )}
 
           {/* Table Header */}
-          <div className="hidden rounded-t-lg border border-b-0 border-border bg-muted/40 px-3 py-2.5 lg:grid lg:grid-cols-[1.2fr_2.5fr_0.6fr_0.6fr_1fr_0.8fr_0.8fr_auto] lg:gap-3">
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <div className="hidden border-b-2 border-border bg-muted/50 px-3 py-3 lg:grid lg:grid-cols-[1.5fr_2fr_0.6fr_0.6fr_1.2fr_0.8fr_1fr_auto] lg:gap-3 items-center">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">
               Article
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">
               Description
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">
               Qté
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">
               Unité
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Prix Unit. HT
+            <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">
+              P.U. HT
             </span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <span className="text-[11px] font-bold uppercase tracking-widest text-foreground">
               TVA
             </span>
-            <span className="text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            <span className="text-right text-[11px] font-bold uppercase tracking-widest text-foreground">
               Total HT
             </span>
             <span className="w-8" />
           </div>
 
           {/* Table Rows */}
-          <div className="divide-y divide-border rounded-b-lg border border-border">
+          <div className="divide-y divide-border border-b border-border">
             {fields.map((field, index) => (
               <LineItemRow
                 key={field.id}
@@ -743,9 +822,9 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
           <button
             type="button"
             onClick={() => append({ ...EMPTY_LINE })}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed border-border py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
+            className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-3 text-xs font-semibold uppercase tracking-wider text-foreground transition-colors hover:border-[#4338CA] hover:bg-[#4338CA]/5 hover:text-[#4338CA]"
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" />
             Ajouter une ligne
           </button>
         </CardContent>
@@ -820,6 +899,7 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
             <Button
               type="button"
               variant="outline"
+              className="border-border"
               onClick={() => router.back()}
               disabled={isSubmitting}
             >
@@ -828,12 +908,12 @@ export function DocumentEditor({ type }: DocumentEditorProps) {
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="gap-2 px-6"
+              className="gap-2 bg-[#4338CA] px-6 text-white hover:bg-[#3730A3]"
             >
               <Save className="size-4" />
               {isSubmitting
                 ? "Enregistrement..."
-                : `Enregistrer ${typeLabel}`}
+                : isEditing ? `Sauvegarder ${typeLabel}` : `Enregistrer ${typeLabel}`}
             </Button>
           </div>
         </div>
@@ -867,10 +947,10 @@ function LineItemRow({
   const lineErrors = errors.lines?.[index];
 
   return (
-    <div className="grid grid-cols-1 gap-3 px-3 py-3 transition-colors hover:bg-muted/20 lg:grid-cols-[1.2fr_2.5fr_0.6fr_0.6fr_1fr_0.8fr_0.8fr_auto] lg:items-center lg:gap-3">
+    <div className="grid grid-cols-1 gap-3 px-3 py-3 transition-colors hover:bg-muted/20 lg:grid-cols-[1.5fr_2fr_0.6fr_0.6fr_1.2fr_0.8fr_1fr_auto] lg:items-center lg:gap-3">
       {/* Article Picker */}
       <div className="space-y-1">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground lg:hidden">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-foreground lg:hidden">
           Article
         </label>
         <Controller
@@ -887,7 +967,7 @@ function LineItemRow({
               placeholder="Choisir..."
               searchPlaceholder="Réf, nom..."
               emptyMessage="Aucun article."
-              className="h-8 text-xs"
+              className="h-9 text-xs border-border"
             />
           )}
         />
@@ -895,14 +975,14 @@ function LineItemRow({
 
       {/* Description */}
       <div className="space-y-1">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground lg:hidden">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-foreground lg:hidden">
           Description
         </label>
         <Input
           {...register(`lines.${index}.description`)}
-          placeholder="Description de l'article ou prestation"
+          placeholder="Description"
           className={cn(
-            "h-8 text-sm",
+            "h-9 text-sm border-border",
             lineErrors?.description && "border-destructive"
           )}
         />
@@ -910,7 +990,7 @@ function LineItemRow({
 
       {/* Quantity */}
       <div className="space-y-1">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground lg:hidden">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-foreground lg:hidden">
           Qté
         </label>
         <Input
@@ -919,7 +999,7 @@ function LineItemRow({
           step={1}
           {...register(`lines.${index}.quantity`, { valueAsNumber: true })}
           className={cn(
-            "h-8 font-mono text-sm tabular-nums",
+            "h-9 font-mono text-sm tabular-nums border-border",
             lineErrors?.quantity && "border-destructive"
           )}
         />
@@ -927,19 +1007,19 @@ function LineItemRow({
 
       {/* Unit */}
       <div className="space-y-1">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground lg:hidden">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-foreground lg:hidden">
           Unité
         </label>
         <Input
           {...register(`lines.${index}.unit`)}
           placeholder="unité"
-          className="h-8 text-xs text-muted-foreground"
+          className="h-9 text-xs text-muted-foreground border-border"
         />
       </div>
 
       {/* Unit Price HT */}
       <div className="space-y-1">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground lg:hidden">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-foreground lg:hidden">
           Prix Unit. HT
         </label>
         <div className="relative">
@@ -949,11 +1029,11 @@ function LineItemRow({
             step={0.01}
             {...register(`lines.${index}.unitPriceHT`, { valueAsNumber: true })}
             className={cn(
-              "h-8 pr-8 font-mono text-sm tabular-nums",
+              "h-9 pr-8 font-mono text-sm tabular-nums border-border",
               lineErrors?.unitPriceHT && "border-destructive"
             )}
           />
-          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-muted-foreground/60">
+          <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] font-bold text-foreground">
             DH
           </span>
         </div>
@@ -961,7 +1041,7 @@ function LineItemRow({
 
       {/* TVA Rate */}
       <div className="space-y-1">
-        <label className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground lg:hidden">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-foreground lg:hidden">
           TVA
         </label>
         <Controller
@@ -971,10 +1051,10 @@ function LineItemRow({
             <select
               value={field.value}
               onChange={(e) => field.onChange(parseFloat(e.target.value))}
-              className="flex h-8 w-full items-center rounded-md border border-input bg-transparent px-2 font-mono text-sm tabular-nums transition-colors focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+              className="flex h-9 w-full items-center rounded-md border border-border bg-transparent px-2 font-mono text-sm tabular-nums transition-colors focus-visible:border-[#4338CA] focus-visible:ring-1 focus-visible:ring-[#4338CA] focus-visible:outline-none"
             >
               {TVA_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
+                <option key={opt.value} value={opt.value} className="bg-background text-foreground">
                   {opt.label}
                 </option>
               ))}
@@ -985,7 +1065,7 @@ function LineItemRow({
 
       {/* Line Total HT */}
       <div className="flex items-center justify-end space-y-1">
-        <label className="mr-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground lg:hidden">
+        <label className="mr-2 text-[10px] font-bold uppercase tracking-widest text-foreground lg:hidden">
           Total HT
         </label>
         <LineTotalCell control={control} index={index} />

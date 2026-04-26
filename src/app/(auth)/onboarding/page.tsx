@@ -83,7 +83,7 @@ export default function OnboardingPage() {
         logoUrl: logoUrl,
         primaryColor: "#2563EB",
         defaultFooter: "Merci pour votre confiance. Conditions de paiement : 30 jours net.",
-        planTier: "Starter",
+        planTier: "Pro",
       };
 
       await databases.createDocument(

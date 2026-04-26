@@ -140,8 +140,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   if (authState === "checking") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <div className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm">
-          <Loader2 className="size-4 animate-spin text-[#2563EB]" />
+        <div className="flex items-center gap-2 rounded-md border border-border bg-card px-4 py-3 text-sm text-foreground shadow-sm">
+          <Loader2 className="size-4 animate-spin text-primary" />
           Vérification de la session...
         </div>
       </div>

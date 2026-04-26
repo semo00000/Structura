@@ -80,7 +80,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#dbeafe,_#f8fafc_45%,_#e2e8f0_100%)] px-4 py-10">
       <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md items-center">
-        <Card className="w-full border-slate-200 bg-white/95 shadow-xl backdrop-blur">
+        <Card className="w-full border-border bg-card/95 shadow-xl backdrop-blur">
           <CardHeader className="space-y-4">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-xs font-semibold text-[#2563EB]">
               <ShieldCheck className="size-3.5" />

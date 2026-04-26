@@ -49,56 +49,58 @@
 }
 
 /* ═══════════════════════════════════════════════════════════
-   STRUCTURA — Corporate Slate & Trust Blue Theme
-   Sidebar: Deep Slate/Navy (slate-900)
-   Primary Actions: Trust Blue (blue-600)
-   Background: Off-white (slate-50)
-   Cards: Pure white with crisp borders (slate-200)
+   STRUCTURA — Monolithic Precision Theme
+   Sidebar: Deep Navy (slate-900)
+   Primary Actions: Electric Indigo (#4338CA)
+   Background: Arctic Paper (#FDFDFD)
+   Surfaces: Frosted Titanium (#F3F5F7)
+   Borders: Platinum Wire (#E5E7EB)
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  /* Background: slate-50 off-white */
-  --background: oklch(0.975 0.005 260);
+  /* Background: Arctic Paper */
+  --background: oklch(0.99 0 0);
   --foreground: oklch(0.15 0.015 260);
 
-  /* Cards: pure white, crisp borders */
+  /* Cards: pure white */
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.15 0.015 260);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.15 0.015 260);
 
-  /* Primary: Trust Blue (blue-600) */
-  --primary: oklch(0.546 0.197 262);
-  --primary-foreground: oklch(0.99 0 0);
+  /* Primary: Electric Indigo */
+  --primary: oklch(0.40 0.15 280);
+  --primary-foreground: oklch(1 0 0);
 
-  /* Secondary: slate-100 */
-  --secondary: oklch(0.96 0.005 260);
+  /* Secondary: Frosted Titanium */
+  --secondary: oklch(0.96 0 0);
   --secondary-foreground: oklch(0.25 0.015 260);
 
-  /* Muted: slate-100/200 range */
-  --muted: oklch(0.95 0.005 260);
+  /* Muted: Lighter Titanium */
+  --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.50 0.01 260);
 
-  /* Accent: light blue tint */
-  --accent: oklch(0.95 0.02 260);
+  /* Accent: Subtle Indigo Tint */
+  --accent: oklch(0.95 0.02 280);
   --accent-foreground: oklch(0.25 0.015 260);
 
-  /* Destructive: red-500 */
+  /* Destructive: Crimson Edge */
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(1 0 0);
 
-  /* Borders: slate-200 crisp */
-  --border: oklch(0.90 0.005 260);
-  --input: oklch(0.90 0.005 260);
-  --ring: oklch(0.546 0.197 262);
+  /* Borders: Platinum Wire */
+  --border: oklch(0.92 0 0);
+  --input: oklch(0.92 0 0);
+  --ring: oklch(0.40 0.15 280);
 
-  /* Charts: corporate palette */
-  --chart-1: oklch(0.546 0.197 262);
-  --chart-2: oklch(0.60 0.12 200);
-  --chart-3: oklch(0.65 0.15 150);
-  --chart-4: oklch(0.55 0.10 280);
-  --chart-5: oklch(0.70 0.08 60);
+  /* Charts: Monolithic palette */
+  --chart-1: oklch(0.40 0.15 280); /* Indigo */
+  --chart-2: oklch(0.60 0.12 200); /* Cyan */
+  --chart-3: oklch(0.65 0.15 150); /* Emerald */
+  --chart-4: oklch(0.55 0.10 280); /* Purple */
+  --chart-5: oklch(0.70 0.08 60);  /* Amber */
 
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
   /* Sidebar: Deep Slate/Navy (slate-900) */
   --sidebar: oklch(0.18 0.015 260);

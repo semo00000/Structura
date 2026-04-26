@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Bell, Search } from "lucide-react";
+import { CalendarDays, Menu } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSidebar } from "@/contexts/SidebarContext";
 import { navigation } from "@/lib/navigation";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import NextLink from "next/link";
 
 function getPageTitle(pathname: string): string {
   for (const group of navigation) {
@@ -45,40 +48,44 @@ export function AppHeader() {
   const pageTitle = getPageTitle(pathname);
   const today = formatDate();
   const { displayName, email: userEmail, initials, handleLogout } = useAuth();
+  const { isMobile, setMobileOpen } = useSidebar();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card px-6">
-      {/* Left — Page title */}
-      <h1 className="text-sm font-semibold tracking-tight text-foreground">
-        {pageTitle}
-      </h1>
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-card px-4 md:px-6">
+      {/* Left — Hamburger (mobile) + Page title */}
+      <div className="flex items-center gap-3">
+        {isMobile && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8 text-muted-foreground md:hidden"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Ouvrir le menu"
+          >
+            <Menu className="size-5" />
+          </Button>
+        )}
+        <h1 className="text-sm font-semibold tracking-tight text-foreground">
+          {pageTitle}
+        </h1>
+      </div>
 
       {/* Right — Actions */}
       <div className="flex items-center gap-2">
-        {/* Date badge */}
+        {/* Date badge (desktop only) */}
         <Badge
           variant="secondary"
-          className="hidden gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium md:flex"
+          className="hidden gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-medium lg:flex"
         >
           <CalendarDays className="size-3" />
           <span className="capitalize">{today}</span>
         </Badge>
 
-        {/* Search */}
-        <Button variant="ghost" size="icon" className="size-8 text-muted-foreground transition-colors duration-200 hover:bg-accent/50 hover:text-foreground">
-          <Search className="size-3.5" />
-          <span className="sr-only">Rechercher</span>
-        </Button>
-
-        {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative size-8 text-muted-foreground transition-colors duration-200 hover:bg-accent/50 hover:text-foreground">
-          <Bell className="size-3.5" />
-          <span className="absolute right-1.5 top-1 size-1.5 rounded-full bg-destructive" />
-          <span className="sr-only">Notifications</span>
-        </Button>
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Separator */}
-        <div className="mx-1 h-5 w-px bg-border" />
+        <div className="mx-1 hidden h-5 w-px bg-border md:block" />
 
         {/* User menu */}
         <DropdownMenu>
@@ -103,8 +110,9 @@ export function AppHeader() {
             </div>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>Paramètres du compte</DropdownMenuItem>
-              <DropdownMenuItem>Aide & Support</DropdownMenuItem>
+              <NextLink href="/parametres">
+                <DropdownMenuItem className="cursor-pointer">Paramètres du compte</DropdownMenuItem>
+              </NextLink>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>

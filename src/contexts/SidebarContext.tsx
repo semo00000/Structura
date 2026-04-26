@@ -1,17 +1,33 @@
 "use client";
 
-import React, { createContext, useContext, useState, type ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
 interface SidebarContextType {
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
   toggle: () => void;
+  mobileOpen: boolean;
+  setMobileOpen: (open: boolean) => void;
+  isMobile: boolean;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      setIsMobile(e.matches);
+      if (e.matches) setMobileOpen(false);
+    };
+    handler(mq);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   return (
     <SidebarContext.Provider
@@ -19,6 +35,9 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
         collapsed,
         setCollapsed,
         toggle: () => setCollapsed((c) => !c),
+        mobileOpen,
+        setMobileOpen,
+        isMobile,
       }}
     >
       {children}

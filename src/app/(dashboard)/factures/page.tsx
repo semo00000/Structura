@@ -8,7 +8,10 @@ import { fr } from "date-fns/locale";
 
 import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { useAuth } from "@/contexts/AuthContext";
+import { DocumentActionsMenu } from "@/components/documents/DocumentActionsMenu";
+import { generateDocumentPDF } from "@/lib/pdf-generator";
 import { DownloadPDFButton } from "@/components/documents/DownloadPDFButton";
+import { getStatusLabel, getStatusStyle } from "@/lib/document-helpers";
 import { formatMAD } from "@/lib/validations/document";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +32,7 @@ type FactureListItem = {
   notes?: string;
   footer?: string;
   linesJson?: string;
+  contactId?: string;
   contact: {
     name: string;
     companyName?: string;
@@ -44,9 +48,7 @@ function readString(source: Record<string, unknown>, key: string): string {
 
 function readNumber(source: Record<string, unknown>, key: string): number {
   const value = source[key];
-  if (typeof value === "number") {
-    return value;
-  }
+  if (typeof value === "number") return value;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
 }
@@ -72,6 +74,7 @@ function mapFactureDocument(document: Models.Document, contacts: any[]): Facture
     notes: readString(source, "notes"),
     footer: readString(source, "footer"),
     linesJson: readString(source, "linesJson"),
+    contactId,
     contact: {
       name: contact?.nameOrCompany || contact?.name || "Client Inconnu",
       companyName: contact?.category === "COMPANY" ? contact.nameOrCompany : "",
@@ -81,18 +84,35 @@ function mapFactureDocument(document: Models.Document, contacts: any[]): Facture
   };
 }
 
+function parseCompanyProfile(source: Record<string, unknown>): any {
+  return {
+    companyName: readString(source, "companyName") || readString(source, "name") || "Configuer votre profil",
+    address: readString(source, "address"),
+    city: readString(source, "city"),
+    telephone: readString(source, "telephone") || readString(source, "phone"),
+    email: readString(source, "email"),
+    ice: readString(source, "ice"),
+    rc: readString(source, "rc"),
+    ifValue: readString(source, "ifValue") || readString(source, "taxId"),
+    patente: readString(source, "patente"),
+    cnss: readString(source, "cnss"),
+    logoUrl: readString(source, "logoUrl"),
+  };
+}
+
 export default function FacturesPage() {
   const { userId } = useAuth();
   const [documents, setDocuments] = React.useState<FactureListItem[]>([]);
+  const [companyProfile, setCompanyProfile] = React.useState<any>(null);
   const [search, setSearch] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
   const loadFactures = React.useCallback(async () => {
-    const { databaseId, documentsCollectionId } = APPWRITE_CONFIG;
+    const { databaseId, documentsCollectionId, companyCollectionId } = APPWRITE_CONFIG;
 
     if (!databaseId || !documentsCollectionId || !userId) {
-      setError("Configuration Appwrite incompl\u00e8te ou session invalide.");
+      setError("Configuration Appwrite incomplète ou session invalide.");
       setIsLoading(false);
       return;
     }
@@ -101,7 +121,7 @@ export default function FacturesPage() {
     setError(null);
 
     try {
-      const [docsResp, contactsResp] = await Promise.all([
+      const [docsResp, contactsResp, companyResp] = await Promise.all([
         databases.listDocuments(databaseId, documentsCollectionId, [
           Query.equal("userId", userId),
           Query.equal("type", "FACTURE"),
@@ -111,10 +131,17 @@ export default function FacturesPage() {
         databases.listDocuments(databaseId, "contacts", [
           Query.equal("userId", userId),
           Query.limit(100),
+        ]),
+        databases.listDocuments(databaseId, companyCollectionId, [
+          Query.equal("userId", userId),
+          Query.limit(1),
         ])
       ]);
 
       setDocuments(docsResp.documents.map(doc => mapFactureDocument(doc, contactsResp.documents)));
+      if (companyResp.documents.length > 0) {
+        setCompanyProfile(parseCompanyProfile(companyResp.documents[0] as unknown as Record<string, unknown>));
+      }
     } catch {
       setError("Impossible de charger les factures depuis Appwrite.");
       setDocuments([]);
@@ -133,11 +160,54 @@ export default function FacturesPage() {
     };
   }, [loadFactures]);
 
+  // ─── Callbacks for actions menu ──────────
+  function handleStatusChange(docId: string, newStatus: string) {
+    setDocuments(prev => prev.map(d => d.id === docId ? { ...d, status: newStatus } : d));
+  }
+
+  function handleDelete(docId: string) {
+    setDocuments(prev => prev.filter(d => d.id !== docId));
+  }
+
+  async function handleDownloadPDF(doc: FactureListItem) {
+    if (!companyProfile) {
+      alert("Profil entreprise en cours de chargement ou manquant.");
+      return;
+    }
+    
+    let lines = [];
+    if (doc.linesJson) {
+      try {
+        lines = JSON.parse(doc.linesJson);
+      } catch (e) {}
+    }
+
+    const docData = {
+      type: "FACTURE",
+      number: doc.number,
+      date: new Date(doc.date),
+      dueDate: doc.dueDate ? new Date(doc.dueDate) : null,
+      totalHT: doc.totalHT,
+      totalTVA: doc.totalTVA,
+      totalTTC: doc.totalTTC,
+      notes: doc.notes,
+      footer: doc.footer,
+      lines,
+    };
+
+    const contactData = {
+      name: doc.contact.name,
+      companyName: doc.contact.companyName,
+      city: doc.contact.city,
+      ice: doc.contact.ice,
+    };
+    
+    await generateDocumentPDF(docData as any, companyProfile, contactData, { planTier: "PRO" });
+  }
+
   const filteredDocuments = React.useMemo(() => {
     const keyword = search.trim().toLowerCase();
-    if (!keyword) {
-      return documents;
-    }
+    if (!keyword) return documents;
 
     return documents.filter((doc) => {
       const clientLabel = (doc.contact.companyName || doc.contact.name).toLowerCase();
@@ -155,13 +225,14 @@ export default function FacturesPage() {
           <div>
             <h1 className="text-lg font-semibold tracking-tight">Factures</h1>
             <p className="text-xs text-muted-foreground">
-              Liste synchronisée avec Appwrite (collection documents)
+              {documents.length} facture{documents.length !== 1 ? "s" : ""}
             </p>
           </div>
         </div>
         <Button className="gap-2" nativeButton={false} render={<Link href="/factures/new" />}>
           <Plus className="size-4" />
-          Nouvelle Facture
+          <span className="hidden sm:inline">Nouvelle Facture</span>
+          <span className="sm:hidden">Nouveau</span>
         </Button>
       </div>
 
@@ -178,10 +249,6 @@ export default function FacturesPage() {
                 className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
               />
             </div>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" type="button">
-              <Filter className="size-3.5" />
-              Filtres
-            </Button>
             <Button
               type="button"
               variant="outline"
@@ -191,7 +258,7 @@ export default function FacturesPage() {
               disabled={isLoading}
             >
               <RefreshCw className="size-3.5" />
-              Rafraîchir
+              <span className="hidden sm:inline">Rafraîchir</span>
             </Button>
           </div>
         </CardContent>
@@ -215,7 +282,7 @@ export default function FacturesPage() {
               <thead className="bg-muted/50 text-muted-foreground">
                 <tr>
                   <th className="px-4 py-3 font-medium">N° Facture</th>
-                  <th className="px-4 py-3 font-medium">Date d&apos;émission</th>
+                  <th className="px-4 py-3 font-medium">Date</th>
                   <th className="px-4 py-3 font-medium">Client</th>
                   <th className="px-4 py-3 font-medium">Statut</th>
                   <th className="px-4 py-3 text-right font-medium">Montant TTC</th>
@@ -251,46 +318,90 @@ export default function FacturesPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
+        <>
+          {/* ─── Mobile Card View ──────────────── */}
+          <div className="flex flex-col gap-3 md:hidden">
+            {filteredDocuments.map((doc) => (
+              <Card key={doc.id} className="transition-colors hover:bg-muted/20 border-2 border-[#111827] dark:border-border rounded-none shadow-none">
+                <CardContent className="py-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-semibold">{doc.number}</span>
+                        <Badge variant="outline" className={`text-[10px] uppercase ${getStatusStyle(doc.status)}`}>
+                          {getStatusLabel(doc.status)}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-foreground">
+                        {doc.contact.companyName || doc.contact.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(doc.date), "dd MMM yyyy", { locale: fr })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-bold tabular-nums text-foreground">
+                        {formatMADWithDh(doc.totalTTC)}
+                      </span>
+                      <DocumentActionsMenu
+                        document={doc}
+                        type="FACTURE"
+                        onStatusChange={handleStatusChange}
+                        onDelete={handleDelete}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* ─── Desktop Table View ────────────── */}
+          <div className="hidden md:block overflow-x-auto rounded-none border-2 border-[#111827] dark:border-border bg-card">
             <table className="w-full whitespace-nowrap text-left text-sm">
-              <thead className="bg-muted/50 text-muted-foreground">
+              <thead className="border-b-2 border-[#111827] dark:border-border bg-[#F9FAFB] dark:bg-muted/50 text-xs font-black uppercase tracking-widest text-[#111827] dark:text-foreground">
                 <tr>
-                  <th className="px-4 py-3 font-medium">N° Document</th>
-                  <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Client</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 text-right font-medium">Total TTC</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
+                  <th className="px-5 py-4">N° Facture</th>
+                  <th className="px-5 py-4">Date</th>
+                  <th className="px-5 py-4">Client</th>
+                  <th className="px-5 py-4">Statut</th>
+                  <th className="px-5 py-4 text-right">Total TTC</th>
+                  <th className="px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border">
+              <tbody className="divide-y-2 divide-[#111827] dark:divide-border">
                 {filteredDocuments.map((doc) => (
-                  <tr key={doc.id} className="transition-colors hover:bg-muted/30">
-                    <td className="px-4 py-3 font-medium text-foreground">{doc.number}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                  <tr key={doc.id} className="transition-colors hover:bg-[#F9FAFB] dark:hover:bg-muted/50">
+                    <td className="px-5 py-4 font-mono font-bold text-[#111827] dark:text-foreground">{doc.number}</td>
+                    <td className="px-5 py-4 font-medium text-[#111827] dark:text-foreground">
                       {format(new Date(doc.date), "dd MMM yyyy", { locale: fr })}
                     </td>
-                    <td className="px-4 py-3 text-foreground">
+                    <td className="px-5 py-4 text-[#111827] dark:text-foreground font-bold">
                       {doc.contact.companyName || doc.contact.name}
                     </td>
-                    <td className="px-4 py-3">
-                      <Badge variant="outline" className="text-[10px] uppercase">
-                        {doc.status}
+                    <td className="px-5 py-4">
+                      <Badge variant="outline" className={`text-[10px] tracking-wider uppercase px-2 py-0.5 rounded-sm ${getStatusStyle(doc.status)}`}>
+                        {getStatusLabel(doc.status)}
                       </Badge>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums">
+                    <td className="px-5 py-4 text-right font-mono font-black tabular-nums text-[#4338CA] dark:text-blue-400">
                       {formatMADWithDh(doc.totalTTC)}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <DownloadPDFButton document={doc} contact={doc.contact} />
+                    <td className="px-5 py-4 text-right">
+                      <DocumentActionsMenu
+                        document={doc}
+                        type="FACTURE"
+                        onStatusChange={handleStatusChange}
+                        onDelete={handleDelete}
+                        onDownloadPDF={() => handleDownloadPDF(doc)}
+                      />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-        </Card>
+        </>
       )}
     </PageTransition>
   );

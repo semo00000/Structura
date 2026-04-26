@@ -89,7 +89,7 @@ export default function AbonnementPage() {
     <div className="flex flex-col gap-8 max-w-5xl mx-auto pb-10">
       
       {/* Current Plan Overview */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+      <div className="rounded-2xl border border-slate-200 dark:border-border bg-card p-6 sm:p-8 shadow-sm">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Mon Abonnement</h1>
@@ -98,7 +98,7 @@ export default function AbonnementPage() {
           
           <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-blue-50 border border-blue-100">
             <div className="size-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-              {planTier === "Starter" ? <Building className="size-5" /> : planTier === "Pro" ? <Zap className="size-5" /> : <Shield className="size-5" />}
+              {planTier === "Pro" ? <Zap className="size-5" /> : <Shield className="size-5" />}
             </div>
             <div>
               <p className="text-xs font-medium text-blue-600 uppercase tracking-wider">Plan Actuel</p>
@@ -142,7 +142,7 @@ export default function AbonnementPage() {
 
       {/* Manual Checkout Flow (Expands when a tier is selected) */}
       {selectedTier && !isPending && (
-        <div className="rounded-2xl border-2 border-blue-500 bg-white p-6 sm:p-8 shadow-xl animate-in fade-in slide-in-from-bottom-4">
+        <div className="rounded-2xl border-2 border-blue-500 bg-card p-6 sm:p-8 shadow-xl animate-in fade-in slide-in-from-bottom-4">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
               <CreditCard className="size-5 text-blue-600" />
@@ -166,7 +166,7 @@ export default function AbonnementPage() {
                 </div>
                 <div>
                   <p className="text-xs text-slate-500 uppercase font-medium">RIB (Relevé d'Identité Bancaire)</p>
-                  <p className="font-mono bg-white border border-slate-200 p-2 rounded-md text-sm text-slate-800 mt-1 tracking-wider">
+                  <p className="font-mono bg-card border border-border p-2 rounded-md text-sm text-foreground mt-1 tracking-wider">
                     048 810 0000000000000000 00
                   </p>
                 </div>
@@ -218,43 +218,8 @@ export default function AbonnementPage() {
         <div>
           <h2 className="text-xl font-bold tracking-tight text-slate-900 mb-6">Plans Disponibles</h2>
           
-          <div className="grid md:grid-cols-3 gap-6">
-            {/* Starter Plan */}
-            <div className={`relative flex flex-col rounded-2xl border ${planTier === "Starter" ? "border-slate-300 bg-slate-50" : "border-slate-200 bg-white opacity-60"} p-6 sm:p-8`}>
-              <div className="mb-6">
-                <h3 className="text-xl font-bold text-slate-900">Starter</h3>
-                <div className="mt-4 flex items-baseline text-4xl font-extrabold text-slate-900">
-                  0 <span className="ml-1 text-xl font-medium text-slate-500">DH</span><span className="ml-1 text-sm font-medium text-slate-500">/mois</span>
-                </div>
-              </div>
-
-              <ul className="flex-1 space-y-4">
-                {[
-                  "Création de devis & factures",
-                  "Gestion des clients basique",
-                  "Jusqu'à 50 factures / mois",
-                  "Filigrane structura sur les PDF",
-                ].map((feature, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <Check className="size-5 text-slate-300 shrink-0" />
-                    <span className="text-sm text-slate-600 leading-tight">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <div className="mt-8">
-                {planTier === "Starter" ? (
-                  <Button variant="outline" className="w-full border-slate-300" disabled>Plan Actuel</Button>
-                ) : (
-                  <Button variant="outline" className="w-full text-slate-600" disabled>
-                    Rétrograder
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Pro Plan */}
-            <div className={`relative flex flex-col rounded-2xl border ${planTier === "Pro" ? "border-[#2563EB] shadow-xl ring-2 ring-[#2563EB]" : "border-blue-200 shadow-md"} bg-white p-6 sm:p-8`}>
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            <div className={`relative flex flex-col rounded-2xl border ${planTier === "Pro" ? "border-[#2563EB] shadow-xl ring-2 ring-[#2563EB]" : "border-blue-200 dark:border-border shadow-md"} bg-card p-6 sm:p-8`}>
               {planTier === "Pro" ? (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#2563EB] text-white text-xs font-bold uppercase tracking-wider rounded-full flex gap-1 items-center">
                   <Crown className="size-3" />
@@ -271,22 +236,22 @@ export default function AbonnementPage() {
                 <h3 className="text-xl font-bold text-[#2563EB] flex items-center gap-2">
                   <Zap className="size-5" /> Pro
                 </h3>
-                <div className="mt-4 flex items-baseline text-4xl font-extrabold text-slate-900">
-                  3 490 <span className="ml-1 text-xl font-medium text-slate-500">DH</span><span className="ml-1 text-sm font-medium text-slate-500">/an</span>
+                <div className="mt-4 flex items-baseline text-4xl font-extrabold text-slate-900 dark:text-white">
+                  3 490 <span className="ml-1 text-xl font-medium text-slate-500 dark:text-slate-400">DH</span><span className="ml-1 text-sm font-medium text-slate-500 dark:text-slate-400">/an</span>
                 </div>
               </div>
 
               <ul className="flex-1 space-y-4">
                 {[
-                  "Tout dans le plan Starter",
-                  "Factures illimitées",
-                  "Gestion de stock avancée",
-                  "Suppression du filigrane PDF",
+                  "Création de devis & factures illimitées",
+                  "Gestion des clients & catalogue",
+                  "Suivi de trésorerie",
+                  "Export PDF pro (Sans filigrane)",
                   "Support client prioritaire",
                 ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <Check className="size-5 text-[#2563EB] shrink-0" />
-                    <span className="text-sm text-slate-700 font-medium leading-tight">{feature}</span>
+                    <span className="text-sm text-slate-700 dark:text-slate-300 font-medium leading-tight">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -307,7 +272,7 @@ export default function AbonnementPage() {
             </div>
 
             {/* Business Plan */}
-            <div className={`relative flex flex-col rounded-2xl border ${planTier === "Business" ? "border-slate-800 shadow-xl ring-2 ring-slate-800" : "border-slate-200"} bg-slate-50 p-6 sm:p-8`}>
+            <div className={`relative flex flex-col rounded-2xl border ${planTier === "Business" ? "border-slate-800 dark:border-slate-500 shadow-xl ring-2 ring-slate-800 dark:ring-slate-500" : "border-slate-200 dark:border-border"} bg-muted/50 p-6 sm:p-8`}>
               {planTier === "Business" && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-full">
                   Plan Actuel
@@ -315,25 +280,25 @@ export default function AbonnementPage() {
               )}
               
               <div className="mb-6">
-                <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
                   <Shield className="size-5" /> Business
                 </h3>
-                <div className="mt-4 flex items-baseline text-4xl font-extrabold text-slate-900">
-                  6 990 <span className="ml-1 text-xl font-medium text-slate-500">DH</span><span className="ml-1 text-sm font-medium text-slate-500">/an</span>
+                <div className="mt-4 flex items-baseline text-4xl font-extrabold text-slate-900 dark:text-white">
+                  6 990 <span className="ml-1 text-xl font-medium text-slate-500 dark:text-slate-400">DH</span><span className="ml-1 text-sm font-medium text-slate-500 dark:text-slate-400">/an</span>
                 </div>
               </div>
 
               <ul className="flex-1 space-y-4">
                 {[
                   "Tout dans le plan Pro",
+                  "Gestion de stock avancée (Grossiste)",
                   "Multi-utilisateurs & Rôles",
-                  "Suivi d'activité avancé",
-                  "Intégration API & Webhooks",
+                  "Suivi d'activité détaillé",
                   "Gestionnaire de compte dédié",
                 ].map((feature, i) => (
                   <li key={i} className="flex items-start gap-3">
                     <Check className="size-5 text-emerald-600 shrink-0" />
-                    <span className="text-sm text-slate-700 leading-tight">{feature}</span>
+                    <span className="text-sm text-slate-700 dark:text-slate-300 leading-tight">{feature}</span>
                   </li>
                 ))}
               </ul>

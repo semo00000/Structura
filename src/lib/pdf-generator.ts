@@ -67,6 +67,39 @@ async function getBase64ImageFromUrl(imageUrl: string): Promise<{ dataUrl: strin
   }
 }
 
+// ─── Color Palette ──────────────────────────────
+const COLORS = {
+  primary: "#0F172A",      // Deep Slate (Better than pure black)
+  secondary: "#334155",    // Cool Gray
+  accent: "#2563EB",       // Premium Blue (LinkedIn/Stripe vibe)
+  accentSoft: "#EFF6FF",   // Very Light Blue
+  textDark: "#1E293B",     // High contrast text
+  textMuted: "#64748B",    // Muted slate
+  textLight: "#94A3B8",    // Faint slate
+  border: "#E2E8F0",       // Soft borders
+  bgSubtle: "#F8FAFC",     // Very subtle background
+  white: "#FFFFFF",
+};
+
+// ─── Document Type Labels ───────────────────────
+function getDocTypeTitle(type: string): string {
+  switch (type) {
+    case "FACTURE": return "FACTURE COMMERCIALE";
+    case "DEVIS": return "OFFRE COMMERCIALE";
+    case "BON_COMMANDE": return "BON DE COMMANDE";
+    case "BON_LIVRAISON": return "BON DE LIVRAISON";
+    case "AVOIR": return "AVOIR FISCAL";
+    default: return type;
+  }
+}
+
+function getBillToLabel(type: string): string {
+  switch (type) {
+    case "BON_COMMANDE": return "FOURNISSEUR";
+    default: return "FACTURER À";
+  }
+}
+
 export async function generateDocumentPDF(
   document: DocumentData,
   company: CompanyInfo,
@@ -74,225 +107,271 @@ export async function generateDocumentPDF(
   options?: { planTier?: string }
 ) {
   const doc = new jsPDF();
-  const themeColor = "#2563EB"; // Trust Blue
-  
-  // Helpers
   const pageWidth = doc.internal.pageSize.getWidth();
-  const marginLeft = 15;
-  const marginRight = 15;
-  const usableWidth = pageWidth - marginLeft - marginRight;
-  
-  // Format currency
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const mL = 20;  // margin left
+  const mR = 20;  // margin right
+  const usableW = pageWidth - mL - mR;
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("fr-MA", {
-      style: "currency",
-      currency: "MAD",
-    }).format(amount);
+    return new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount) + " DH";
   };
 
-  let headerOffset = 0;
+  // ═══════════════════════════════════════════
+  // 1. TOP BAR — Accent stripe
+  // ═══════════════════════════════════════════
+  doc.setFillColor(COLORS.accent);
+  doc.rect(0, 0, pageWidth, 4, "F");
 
-  // 1. HEADER (Company Logo & Details)
+  // ═══════════════════════════════════════════
+  // 2. HEADER — Logo + Company + Doc Type
+  // ═══════════════════════════════════════════
+  let logoEndX = mL;
+
   if (company.logoUrl) {
     const imgData = await getBase64ImageFromUrl(company.logoUrl);
     if (imgData) {
-      // Assuming a standard max height of 20 and proportional width
-      // Since we don't have natural dimensions trivially without DOM Image, 
-      // we can do a fixed rectangular fit or create an Image obj
       const img = new Image();
       img.src = imgData.dataUrl;
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve;
-      });
-      const maxH = 20;
+      await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+      const maxH = 18;
       const ratio = img.width / img.height;
       const w = maxH * ratio;
-      doc.addImage(imgData.dataUrl, imgData.ext, marginLeft, 15, w, maxH);
-      headerOffset = maxH + 5;
+      doc.addImage(imgData.dataUrl, imgData.ext, mL, 12, w, maxH);
+      logoEndX = mL + w + 6;
     }
   }
 
-  const titleY = 25 + headerOffset;
-  const detailsY = titleY + 7;
-
+  // Company name + details (left)
+  const companyY = 16;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.setTextColor(themeColor);
-  doc.text((company.companyName || "Entreprise").toUpperCase(), marginLeft, titleY);
-  
+  doc.setFontSize(14);
+  doc.setTextColor(COLORS.primary);
+  doc.text((company.companyName || "Entreprise").toUpperCase(), logoEndX, companyY);
+
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor("#64748B"); // slate-500
-  let yPos = detailsY;
-  if (company.address) { doc.text(company.address, marginLeft, yPos); yPos += 5; }
-  if (company.city) { doc.text(company.city, marginLeft, yPos); yPos += 5; }
-  if (company.email || company.telephone) {
-    const contactLine = [company.email, company.telephone].filter(Boolean).join("  |  ");
-    doc.text(contactLine, marginLeft, yPos); 
-    yPos += 5;
-  }
+  doc.setFontSize(8.5);
+  doc.setTextColor(COLORS.textMuted);
+  let cyPos = companyY + 5;
+  if (company.address) { doc.text(company.address, logoEndX, cyPos); cyPos += 4; }
+  if (company.city) { doc.text(company.city, logoEndX, cyPos); cyPos += 4; }
+  const contactLine = [company.email, company.telephone].filter(Boolean).join("  ·  ");
+  if (contactLine) { doc.text(contactLine, logoEndX, cyPos); cyPos += 4; }
 
-  // 2. DOCUMENT TYPE & NUMBER
+  // Document type (right side)
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(24);
-  doc.setTextColor("#0F172A"); // slate-900
-  const docTypeTitle = document.type === "FACTURE" ? "FACTURE" : document.type === "DEVIS" ? "DEVIS" : document.type;
-  doc.text(docTypeTitle, pageWidth - marginRight, 25, { align: "right" });
-  
-  doc.setFontSize(12);
-  doc.setTextColor("#64748B");
-  doc.text(`N° : ${document.number}`, pageWidth - marginRight, 32, { align: "right" });
-  doc.text(`Date : ${format(new Date(document.date), "dd MMM yyyy", { locale: fr })}`, pageWidth - marginRight, 38, { align: "right" });
+  doc.setFontSize(22);
+  doc.setTextColor(COLORS.primary);
+  doc.text(getDocTypeTitle(document.type), pageWidth - mR, 18, { align: "right" });
+
+  // Doc metadata below type
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(COLORS.textMuted);
+  doc.text(`N° ${document.number}`, pageWidth - mR, 25, { align: "right" });
+  doc.text(
+    `Date : ${format(new Date(document.date), "dd MMMM yyyy", { locale: fr })}`,
+    pageWidth - mR, 30, { align: "right" }
+  );
   if (document.dueDate) {
-    doc.text(`Échéance : ${format(new Date(document.dueDate), "dd MMM yyyy", { locale: fr })}`, pageWidth - marginRight, 44, { align: "right" });
+    doc.text(
+      `Échéance : ${format(new Date(document.dueDate), "dd MMMM yyyy", { locale: fr })}`,
+      pageWidth - mR, 35, { align: "right" }
+    );
   }
 
-  // 3. BILL TO (Client info)
-  let billToYOffset = Math.max(yPos + 10, 50);
+  // ═══════════════════════════════════════════
+  // 3. DIVIDER
+  // ═══════════════════════════════════════════
+  const dividerY = Math.max(cyPos + 4, 42);
+  doc.setDrawColor(COLORS.border);
+  doc.setLineWidth(0.3);
+  doc.line(mL, dividerY, pageWidth - mR, dividerY);
+
+  // ═══════════════════════════════════════════
+  // 4. BILL TO — Client/Supplier box
+  // ═══════════════════════════════════════════
+  const billY = dividerY + 10;
+
+  // Destinataire Header
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(COLORS.textLight);
+  doc.text(getBillToLabel(document.type), mL, billY);
+
+  // Client Details
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.setTextColor(themeColor);
-  doc.text("FACTURER À :", marginLeft, billToYOffset);
-  
-  doc.setFont("helvetica", "bold");
-  doc.setTextColor("#0F172A");
-  doc.text(contact.companyName || contact.name, marginLeft, billToYOffset + 7);
-  
+  doc.setTextColor(COLORS.primary);
+  doc.text(contact.companyName || contact.name, mL, billY + 6);
+
   doc.setFont("helvetica", "normal");
-  doc.setTextColor("#64748B");
-  let clientY = billToYOffset + 12;
-  if (contact.address) { doc.text(contact.address, marginLeft, clientY); clientY += 5; }
-  if (contact.city) { doc.text(contact.city, marginLeft, clientY); clientY += 5; }
-  if (contact.ice) { doc.text(`ICE: ${contact.ice}`, marginLeft, clientY); clientY += 5; }
+  doc.setFontSize(9);
+  doc.setTextColor(COLORS.textMuted);
+  let clientDetailY = billY + 11;
+  if (contact.address) { doc.text(contact.address, mL, clientDetailY); clientDetailY += 4.5; }
+  if (contact.city) { doc.text(contact.city, mL, clientDetailY); clientDetailY += 4.5; }
+  if (contact.ice) { 
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(COLORS.secondary);
+    doc.text(`ICE : ${contact.ice}`, mL, clientDetailY); 
+  }
 
-  const tableStartY = Math.max(clientY + 10, billToYOffset + 30);
+  const tableStartY = billY + 35;
 
-  // 4. ITEMS TABLE (AutoTable)
-  const tableColumn = ["Désignation", "Qté", "Prix U. HT", "TVA", "Total HT"];
-  const tableRows = document.lines.map(line => [
+  // ═══════════════════════════════════════════
+  // 5. LINE ITEMS TABLE
+  // ═══════════════════════════════════════════
+  const tableColumns = ["#", "Désignation", "Qté", "Prix U. HT", "TVA", "Total HT"];
+  const tableRows = document.lines.map((line, i) => [
+    String(i + 1),
     line.description,
     line.quantity.toString(),
     formatCurrency(line.unitPriceHT),
     `${(line.tvaRate * 100).toFixed(0)}%`,
-    formatCurrency(line.totalHT)
+    formatCurrency(line.totalHT),
   ]);
 
   autoTable(doc, {
     startY: tableStartY,
-    head: [tableColumn],
+    head: [tableColumns],
     body: tableRows,
-    theme: "plain",
+    theme: "striped",
     headStyles: {
-      fillColor: themeColor,
-      textColor: "#FFFFFF",
+      fillColor: COLORS.bgSubtle,
+      textColor: COLORS.primary,
       fontStyle: "bold",
+      fontSize: 8.5,
+      cellPadding: { top: 5, bottom: 5, left: 5, right: 5 },
     },
     styles: {
       font: "helvetica",
       fontSize: 9,
-      textColor: "#334155", // slate-700
-      cellPadding: 6,
-      overflow: 'linebreak', // Ensures extremely long descriptions wrap perfectly without breaking layout
+      textColor: COLORS.textDark,
+      cellPadding: { top: 6, bottom: 6, left: 5, right: 5 },
+      lineColor: COLORS.border,
+      lineWidth: 0.1,
+      overflow: "linebreak",
     },
     columnStyles: {
-      0: { cellWidth: "auto" }, // Description wraps
-      1: { cellWidth: 15, halign: "center" }, // Qty
-      2: { cellWidth: 35, halign: "right" }, // Prix
-      3: { cellWidth: 15, halign: "center" }, // TVA
-      4: { cellWidth: 35, halign: "right" }  // Total
+      0: { cellWidth: 10, halign: "center", textColor: COLORS.textLight, fontSize: 8 },
+      1: { cellWidth: "auto" },
+      2: { cellWidth: 16, halign: "center" },
+      3: { cellWidth: 36, halign: "right" },
+      4: { cellWidth: 18, halign: "center" },
+      5: { cellWidth: 36, halign: "right", fontStyle: "bold" },
     },
     alternateRowStyles: {
-      fillColor: "#F8FAFC", // slate-50
-    }
+      fillColor: COLORS.white,
+    },
+    didDrawPage: () => {
+      // Re-draw accent bar on new pages
+      doc.setFillColor(COLORS.accent);
+      doc.rect(0, 0, pageWidth, 4, "F");
+    },
   });
 
   // @ts-expect-error - jspdf-autotable specific property addition
   const finalY = doc.lastAutoTable.finalY || tableStartY + 50;
 
-  // 5. TOTALS PANEL (Bottom Right)
-  const totalsBoxWidth = 80;
-  const totalsBoxX = pageWidth - marginRight - totalsBoxWidth;
-  
-  doc.setDrawColor("#E2E8F0"); // slate-200
-  doc.setFillColor("#F8FAFC"); // slate-50
-  doc.roundedRect(totalsBoxX, finalY + 10, totalsBoxWidth, 35, 2, 2, "FD");
+  // ═══════════════════════════════════════════
+  // 6. TOTALS PANEL — Right-aligned summary
+  // ═══════════════════════════════════════════
+  const totalsW = 75;
+  const totalsX = pageWidth - mR - totalsW;
+  const totalsY = finalY + 8;
 
+  // Rounded box
+  doc.setDrawColor(COLORS.border);
+  doc.setFillColor(COLORS.bgSubtle);
+  doc.roundedRect(totalsX, totalsY, totalsW, 38, 3, 3, "FD");
+
+  // HT
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor("#64748B");
-  doc.text("Total HT", totalsBoxX + 5, finalY + 18);
-  doc.text(formatCurrency(document.totalHT), totalsBoxX + totalsBoxWidth - 5, finalY + 18, { align: "right" });
-  
-  doc.text("Total TVA", totalsBoxX + 5, finalY + 26);
-  doc.text(formatCurrency(document.totalTVA), totalsBoxX + totalsBoxWidth - 5, finalY + 26, { align: "right" });
+  doc.setFontSize(8.5);
+  doc.setTextColor(COLORS.textMuted);
+  doc.text("Sous-total HT", totalsX + 5, totalsY + 8);
+  doc.setTextColor(COLORS.textDark);
+  doc.text(formatCurrency(document.totalHT), totalsX + totalsW - 5, totalsY + 8, { align: "right" });
 
-  doc.setDrawColor("#CBD5E1"); // slate-300
-  doc.line(totalsBoxX + 5, finalY + 31, totalsBoxX + totalsBoxWidth - 5, finalY + 31);
+  // TVA
+  doc.setTextColor(COLORS.textMuted);
+  doc.text("TVA", totalsX + 5, totalsY + 15);
+  doc.setTextColor(COLORS.textDark);
+  doc.text(formatCurrency(document.totalTVA), totalsX + totalsW - 5, totalsY + 15, { align: "right" });
 
+  // Divider line
+  doc.setDrawColor(COLORS.border);
+  doc.line(totalsX + 5, totalsY + 21, totalsX + totalsW - 5, totalsY + 21);
+
+  // TTC
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(12);
-  doc.setTextColor(themeColor);
-  doc.text("Total TTC", totalsBoxX + 5, finalY + 40);
-  doc.text(formatCurrency(document.totalTTC), totalsBoxX + totalsBoxWidth - 5, finalY + 40, { align: "right" });
+  doc.setFontSize(11);
+  doc.setTextColor(COLORS.accent);
+  doc.text("Total TTC", totalsX + 5, totalsY + 30);
+  doc.text(formatCurrency(document.totalTTC), totalsX + totalsW - 5, totalsY + 30, { align: "right" });
 
-  // 6. NOTES (Bottom Left)
+  // ═══════════════════════════════════════════
+  // 7. NOTES — Left side, below table
+  // ═══════════════════════════════════════════
   if (document.notes) {
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor("#0F172A");
-    doc.text("Notes :", marginLeft, finalY + 15);
-    
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.primary);
+    doc.text("Notes", mL, totalsY + 5);
+
     doc.setFont("helvetica", "normal");
-    doc.setTextColor("#64748B");
-    const splitNotes = doc.splitTextToSize(document.notes, pageWidth - marginLeft - totalsBoxWidth - 20);
-    doc.text(splitNotes, marginLeft, finalY + 22);
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.textMuted);
+    const splitNotes = doc.splitTextToSize(document.notes, usableW * 0.5 - 5);
+    doc.text(splitNotes, mL, totalsY + 10);
   }
 
-  // 7. MOROCCAN LEGAL FOOTER
-  const pageHeight = doc.internal.pageSize.getHeight();
-  const footerY = pageHeight - 15;
-  
-  doc.setDrawColor("#E2E8F0");
-  doc.line(marginLeft, footerY - 5, pageWidth - marginRight, footerY - 5);
-  
+  // ═══════════════════════════════════════════
+  // 8. FOOTER — Legal info + accent bar bottom
+  // ═══════════════════════════════════════════
+  const footerY = pageHeight - 20;
+
+  // Legal line
+  doc.setDrawColor(COLORS.border);
+  doc.setLineWidth(0.3);
+  doc.line(mL, footerY - 4, pageWidth - mR, footerY - 4);
+
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor("#94A3B8"); // slate-400
-  
-  const legalItems = [];
+  doc.setFontSize(7);
+  doc.setTextColor(COLORS.textLight);
+
+  const legalItems: string[] = [];
   if (company.ice) legalItems.push(`ICE: ${company.ice}`);
   if (company.rc) legalItems.push(`RC: ${company.rc}`);
   if (company.ifValue) legalItems.push(`IF: ${company.ifValue}`);
   if (company.patente) legalItems.push(`Patente: ${company.patente}`);
   if (company.cnss) legalItems.push(`CNSS: ${company.cnss}`);
-  
-  const footerString = legalItems.join("  •  ");
-  doc.text(footerString, pageWidth / 2, footerY, { align: "center" });
 
-  // 8. CUSTOM FOOTER (From DocumentSettings or Document)
+  if (legalItems.length > 0) {
+    doc.text(legalItems.join("  ·  "), pageWidth / 2, footerY, { align: "center" });
+  }
+
+  // Custom footer text
   if (document.footer) {
-    const splitFooter = doc.splitTextToSize(document.footer, usableWidth);
-    doc.text(splitFooter, pageWidth / 2, footerY + 5, { align: "center" });
+    doc.setFontSize(7);
+    doc.setTextColor(COLORS.textLight);
+    const splitFooter = doc.splitTextToSize(document.footer, usableW);
+    doc.text(splitFooter, pageWidth / 2, footerY + 4, { align: "center" });
   }
 
-  // 9. STARTER PLAN WATERMARK
-  if (!options?.planTier || options.planTier === "Starter") {
-    const totalPages = doc.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(40);
-      doc.setTextColor(200, 200, 200); // light grey
-      doc.text(
-        "Généré par Structura",
-        pageWidth / 2,
-        pageHeight / 2,
-        { align: "center", angle: 35 }
-      );
-    }
+  // Structura Watermark for Core users
+  if (options?.planTier === "Core") {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(COLORS.textLight);
+    doc.text("Généré par Structura Core — ERP Commercial", pageWidth / 2, pageHeight - 6, { align: "center" });
   }
 
-  // Download Action
+  // Bottom accent bar
+  doc.setFillColor(COLORS.accent);
+  doc.rect(0, pageHeight - 2, pageWidth, 2, "F");
+
+  // ─── Download ─────────────────────────────
   doc.save(`${document.type}_${document.number}.pdf`);
 }

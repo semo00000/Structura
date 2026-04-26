@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { CompanyProvider } from "@/contexts/CompanyContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/hooks/use-toast";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -45,16 +46,23 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      suppressHydrationWarning
+      suppressHydrationWarning={true}
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body suppressHydrationWarning className="min-h-full bg-background text-foreground">
+      <body suppressHydrationWarning={true} className="min-h-full bg-background text-foreground">
         <ToastProvider>
           <AuthProvider>
             <CompanyProvider>
               <TooltipProvider>
-                {children}
-                <Toaster />
+                <ThemeProvider
+                  attribute="class"
+                  defaultTheme="system"
+                  enableSystem
+                  disableTransitionOnChange
+                >
+                  {children}
+                  <Toaster />
+                </ThemeProvider>
               </TooltipProvider>
             </CompanyProvider>
           </AuthProvider>

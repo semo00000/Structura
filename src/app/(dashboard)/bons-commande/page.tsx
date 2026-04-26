@@ -5,312 +5,96 @@ import Link from "next/link";
 import { Query, type Models } from "appwrite";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-
 import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { useAuth } from "@/contexts/AuthContext";
-import { DownloadPDFButton } from "@/components/documents/DownloadPDFButton";
+import { DocumentActionsMenu } from "@/components/documents/DocumentActionsMenu";
+import { getStatusLabel, getStatusStyle } from "@/lib/document-helpers";
 import { formatMAD } from "@/lib/validations/document";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageTransition } from "@/components/ui/page-transition";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
-import { ShoppingCart, Plus, Search, Filter, RefreshCw, AlertCircle } from "lucide-react";
+import { ShoppingCart, Plus, Search, RefreshCw, AlertCircle } from "lucide-react";
 
-type BonCommandeListItem = {
-  id: string;
-  number: string;
-  date: string;
-  status: string;
-  totalTTC: number;
-  totalHT: number;
-  totalTVA: number;
-  dueDate?: string | null;
-  notes?: string;
-  footer?: string;
-  linesJson?: string;
-  contact: {
-    name: string;
-    companyName?: string;
-    city?: string;
-    ice?: string;
-  };
+type BCItem = {
+  id: string; number: string; date: string; status: string;
+  totalTTC: number; totalHT: number; totalTVA: number;
+  dueDate?: string | null; notes?: string; footer?: string;
+  linesJson?: string; contactId?: string;
+  contact: { name: string; companyName?: string; city?: string; ice?: string };
 };
 
-function readString(source: Record<string, unknown>, key: string): string {
-  const value = source[key];
-  return typeof value === "string" ? value : "";
-}
+function rs(s: Record<string, unknown>, k: string) { const v = s[k]; return typeof v === "string" ? v : ""; }
+function rn(s: Record<string, unknown>, k: string) { const v = s[k]; return typeof v === "number" ? v : Number.isFinite(Number(v)) ? Number(v) : 0; }
 
-function readNumber(source: Record<string, unknown>, key: string): number {
-  const value = source[key];
-  if (typeof value === "number") {
-    return value;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatMADWithDh(amount: number): string {
-  return `${formatMAD(amount)} DH`;
-}
-
-const STATUS_STYLES: Record<string, string> = {
-  DRAFT: "border-slate-300 text-slate-600",
-  SENT: "border-blue-300 text-blue-700 bg-blue-50",
-  CONFIRMED: "border-emerald-300 text-emerald-700 bg-emerald-50",
-  RECEIVED: "border-green-400 text-green-800 bg-green-50",
-  CANCELLED: "border-red-300 text-red-600 bg-red-50",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Brouillon",
-  SENT: "Envoyé",
-  CONFIRMED: "Confirmé",
-  RECEIVED: "Reçu",
-  CANCELLED: "Annulé",
-};
-
-function mapBonCommandeDocument(document: Models.Document, contacts: any[]): BonCommandeListItem {
-  const source = document as unknown as Record<string, unknown>;
-  const contactId = readString(source, "contactId");
-  const contact = contacts.find((entry) => entry.$id === contactId);
-
-  return {
-    id: document.$id,
-    number: readString(source, "number") || `BC-${document.$id.slice(0, 6)}`,
-    date: readString(source, "date") || document.$createdAt,
-    status: readString(source, "status") || "DRAFT",
-    totalTTC: readNumber(source, "totalTTC"),
-    totalHT: readNumber(source, "totalHT"),
-    totalTVA: readNumber(source, "totalTVA"),
-    dueDate: readString(source, "dueDate") || null,
-    notes: readString(source, "notes"),
-    footer: readString(source, "footer"),
-    linesJson: readString(source, "linesJson"),
-    contact: {
-      name: contact?.nameOrCompany || contact?.name || "Fournisseur Inconnu",
-      companyName: contact?.category === "COMPANY" ? contact.nameOrCompany : "",
-      city: contact?.city || "",
-      ice: contact?.ice || "",
-    },
-  };
+function mapDoc(d: Models.Document, contacts: any[]): BCItem {
+  const s = d as unknown as Record<string, unknown>;
+  const cid = rs(s, "contactId");
+  const c = contacts.find(e => e.$id === cid);
+  return { id: d.$id, number: rs(s, "number") || `BC-${d.$id.slice(0,6)}`, date: rs(s, "date") || d.$createdAt, status: rs(s, "status") || "DRAFT", totalTTC: rn(s, "totalTTC"), totalHT: rn(s, "totalHT"), totalTVA: rn(s, "totalTVA"), dueDate: rs(s, "dueDate") || null, notes: rs(s, "notes"), footer: rs(s, "footer"), linesJson: rs(s, "linesJson"), contactId: cid, contact: { name: c?.nameOrCompany || c?.name || "Fournisseur Inconnu", companyName: c?.category === "COMPANY" ? c.nameOrCompany : "", city: c?.city || "", ice: c?.ice || "" } };
 }
 
 export default function BonsCommandePage() {
   const { userId } = useAuth();
-  const [documents, setDocuments] = React.useState<BonCommandeListItem[]>([]);
+  const [docs, setDocs] = React.useState<BCItem[]>([]);
   const [search, setSearch] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(true);
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
-  const loadBonsCommande = React.useCallback(async () => {
+  const load = React.useCallback(async () => {
     const { databaseId, documentsCollectionId } = APPWRITE_CONFIG;
-
-    if (!databaseId || !documentsCollectionId || !userId) {
-      setError("Configuration Appwrite incompl\u00e8te ou session invalide.");
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-
+    if (!databaseId || !documentsCollectionId || !userId) { setError("Config manquante"); setLoading(false); return; }
+    setLoading(true); setError(null);
     try {
-      const [docsResp, contactsResp] = await Promise.all([
-        databases.listDocuments(databaseId, documentsCollectionId, [
-          Query.equal("userId", userId),
-          Query.equal("type", "BON_COMMANDE"),
-          Query.orderDesc("$createdAt"),
-          Query.limit(100),
-        ]),
-        databases.listDocuments(databaseId, "contacts", [
-          Query.equal("userId", userId),
-          Query.equal("type", "FOURNISSEUR"),
-          Query.limit(100),
-        ])
+      const [dr, cr] = await Promise.all([
+        databases.listDocuments(databaseId, documentsCollectionId, [Query.equal("userId", userId), Query.equal("type", "BON_COMMANDE"), Query.orderDesc("$createdAt"), Query.limit(100)]),
+        databases.listDocuments(databaseId, "contacts", [Query.equal("userId", userId), Query.equal("type", "FOURNISSEUR"), Query.limit(100)])
       ]);
-
-      setDocuments(docsResp.documents.map(doc => mapBonCommandeDocument(doc, contactsResp.documents)));
-    } catch {
-      setError("Impossible de charger les bons de commande depuis Appwrite.");
-      setDocuments([]);
-    } finally {
-      setIsLoading(false);
-    }
+      setDocs(dr.documents.map(d => mapDoc(d, cr.documents)));
+    } catch { setError("Impossible de charger les bons de commande."); setDocs([]); }
+    finally { setLoading(false); }
   }, [userId]);
 
-  React.useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void loadBonsCommande();
-    }, 0);
+  React.useEffect(() => { const t = window.setTimeout(() => void load(), 0); return () => window.clearTimeout(t); }, [load]);
+  const onStatus = (id: string, s: string) => setDocs(p => p.map(d => d.id === id ? { ...d, status: s } : d));
+  const onDel = (id: string) => setDocs(p => p.filter(d => d.id !== id));
 
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [loadBonsCommande]);
+  const filtered = React.useMemo(() => {
+    const kw = search.trim().toLowerCase();
+    if (!kw) return docs;
+    return docs.filter(d => d.number.toLowerCase().includes(kw) || (d.contact.companyName || d.contact.name).toLowerCase().includes(kw));
+  }, [docs, search]);
 
-  const filteredDocuments = React.useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    if (!keyword) {
-      return documents;
-    }
-
-    return documents.filter((doc) => {
-      const supplierLabel = (doc.contact.companyName || doc.contact.name).toLowerCase();
-      return doc.number.toLowerCase().includes(keyword) || supplierLabel.includes(keyword);
-    });
-  }, [documents, search]);
+  const fmt = (n: number) => `${formatMAD(n)} DH`;
 
   return (
     <PageTransition className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-            <ShoppingCart className="size-5 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold tracking-tight">Bons de Commande</h1>
-            <p className="text-xs text-muted-foreground">
-              Commandes fournisseurs synchronisées avec Appwrite
-            </p>
-          </div>
+          <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10"><ShoppingCart className="size-5 text-primary" /></div>
+          <div><h1 className="text-lg font-semibold tracking-tight">Bons de Commande</h1><p className="text-xs text-muted-foreground">{docs.length} bon{docs.length !== 1 ? "s" : ""}</p></div>
         </div>
-        <Button className="gap-2" nativeButton={false} render={<Link href="/bons-commande/new" />}>
-          <Plus className="size-4" />
-          Nouveau Bon de Commande
-        </Button>
+        <Button className="gap-2" nativeButton={false} render={<Link href="/bons-commande/new" />}><Plus className="size-4" /><span className="hidden sm:inline">Nouveau Bon</span><span className="sm:hidden">Nouveau</span></Button>
       </div>
 
-      <Card className="border-slate-200">
-        <CardContent className="py-3">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/50" />
-              <input
-                type="text"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="Rechercher par numéro, fournisseur..."
-                className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-              />
-            </div>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs" type="button">
-              <Filter className="size-3.5" />
-              Filtres
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-1.5 text-xs"
-              onClick={loadBonsCommande}
-              disabled={isLoading}
-            >
-              <RefreshCw className="size-3.5" />
-              Rafraîchir
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <Card className="border-slate-200"><CardContent className="py-3"><div className="flex items-center gap-3"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/50" /><input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher..." className="h-9 w-full rounded-md border border-input bg-transparent pl-9 pr-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/50 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30" /></div><Button type="button" variant="outline" size="sm" className="gap-1.5 text-xs" onClick={load} disabled={loading}><RefreshCw className="size-3.5" /></Button></div></CardContent></Card>
 
-      {error ? (
-        <Card className="border-red-200">
-          <CardContent className="py-6">
-            <div className="flex items-center gap-2 text-red-700">
-              <AlertCircle className="size-4" />
-              <p className="text-sm">{error}</p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+      {error && <Card className="border-red-200"><CardContent className="py-6"><div className="flex items-center gap-2 text-red-700"><AlertCircle className="size-4" /><p className="text-sm">{error}</p></div></CardContent></Card>}
 
-      {isLoading ? (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-left text-sm">
-              <thead className="bg-muted/50 text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">N° Document</th>
-                  <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Fournisseur</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 text-right font-medium">Total TTC</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                <TableSkeleton columns={6} rows={5} />
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      ) : filteredDocuments.length === 0 ? (
-        <Card>
-          <CardContent>
-            <div className="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-border">
-              <div className="text-center">
-                <div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/5">
-                  <ShoppingCart className="size-8 text-primary/30" />
-                </div>
-                <h3 className="text-sm font-semibold text-foreground">
-                  Aucun bon de commande
-                </h3>
-                <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                  Créez votre premier bon de commande pour passer des commandes auprès de vos fournisseurs.
-                </p>
-                <Button className="mt-4 gap-2" size="sm" nativeButton={false} render={<Link href="/bons-commande/new" />}>
-                  <Plus className="size-4" />
-                  Créer un bon de commande
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {loading ? (
+        <Card><div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead className="bg-muted/50 text-muted-foreground"><tr><th className="px-4 py-3 font-medium">N°</th><th className="px-4 py-3 font-medium">Date</th><th className="px-4 py-3 font-medium">Fournisseur</th><th className="px-4 py-3 font-medium">Statut</th><th className="px-4 py-3 text-right font-medium">TTC</th><th className="px-4 py-3 text-right font-medium">Actions</th></tr></thead><tbody className="divide-y divide-border"><TableSkeleton columns={6} rows={5} /></tbody></table></div></Card>
+      ) : filtered.length === 0 ? (
+        <Card><CardContent><div className="flex min-h-[320px] items-center justify-center rounded-lg border border-dashed border-border"><div className="text-center"><div className="mx-auto mb-4 flex size-16 items-center justify-center rounded-full bg-primary/5"><ShoppingCart className="size-8 text-primary/30" /></div><h3 className="text-sm font-semibold">Aucun bon de commande</h3><p className="mt-1 max-w-sm text-sm text-muted-foreground">Créez un bon pour passer des commandes fournisseurs.</p><Button className="mt-4 gap-2" size="sm" nativeButton={false} render={<Link href="/bons-commande/new" />}><Plus className="size-4" />Créer un bon</Button></div></div></CardContent></Card>
       ) : (
-        <Card>
-          <div className="overflow-x-auto">
-            <table className="w-full whitespace-nowrap text-left text-sm">
-              <thead className="bg-muted/50 text-muted-foreground">
-                <tr>
-                  <th className="px-4 py-3 font-medium">N° Document</th>
-                  <th className="px-4 py-3 font-medium">Date</th>
-                  <th className="px-4 py-3 font-medium">Fournisseur</th>
-                  <th className="px-4 py-3 font-medium">Statut</th>
-                  <th className="px-4 py-3 text-right font-medium">Total TTC</th>
-                  <th className="px-4 py-3 text-right font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredDocuments.map((doc) => (
-                  <tr key={doc.id} className="transition-colors hover:bg-muted/30">
-                    <td className="px-4 py-3 font-medium text-foreground">{doc.number}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {format(new Date(doc.date), "dd MMM yyyy", { locale: fr })}
-                    </td>
-                    <td className="px-4 py-3 text-foreground">
-                      {doc.contact.companyName || doc.contact.name}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] uppercase ${STATUS_STYLES[doc.status] || ""}`}
-                      >
-                        {STATUS_LABELS[doc.status] || doc.status}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono font-semibold tabular-nums">
-                      {formatMADWithDh(doc.totalTTC)}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <DownloadPDFButton document={doc} contact={doc.contact} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <>
+          <div className="flex flex-col gap-3 md:hidden">
+            {filtered.map(d => (
+              <Card key={d.id}><CardContent className="py-3"><div className="flex items-start justify-between"><div className="flex-1 space-y-1"><div className="flex items-center gap-2"><span className="font-mono text-sm font-semibold">{d.number}</span><Badge variant="outline" className={`text-[10px] uppercase ${getStatusStyle(d.status)}`}>{getStatusLabel(d.status)}</Badge></div><p className="text-sm">{d.contact.companyName || d.contact.name}</p><p className="text-xs text-muted-foreground">{format(new Date(d.date), "dd MMM yyyy", { locale: fr })}</p></div><div className="flex items-center gap-2"><span className="font-mono text-sm font-bold tabular-nums">{fmt(d.totalTTC)}</span><DocumentActionsMenu document={d} type="BON_COMMANDE" onStatusChange={onStatus} onDelete={onDel} /></div></div></CardContent></Card>
+            ))}
           </div>
-        </Card>
+          <Card className="hidden md:block"><div className="overflow-x-auto"><table className="w-full whitespace-nowrap text-left text-sm"><thead className="bg-muted/50 text-muted-foreground"><tr><th className="px-4 py-3 font-medium">N° BC</th><th className="px-4 py-3 font-medium">Date</th><th className="px-4 py-3 font-medium">Fournisseur</th><th className="px-4 py-3 font-medium">Statut</th><th className="px-4 py-3 text-right font-medium">Total TTC</th><th className="px-4 py-3 text-right font-medium">Actions</th></tr></thead><tbody className="divide-y divide-border">{filtered.map(d => (<tr key={d.id} className="transition-colors hover:bg-muted/30"><td className="px-4 py-3 font-mono font-medium">{d.number}</td><td className="px-4 py-3 text-muted-foreground">{format(new Date(d.date), "dd MMM yyyy", { locale: fr })}</td><td className="px-4 py-3">{d.contact.companyName || d.contact.name}</td><td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] uppercase ${getStatusStyle(d.status)}`}>{getStatusLabel(d.status)}</Badge></td><td className="px-4 py-3 text-right font-mono font-semibold tabular-nums">{fmt(d.totalTTC)}</td><td className="px-4 py-3 text-right"><DocumentActionsMenu document={d} type="BON_COMMANDE" onStatusChange={onStatus} onDelete={onDel} /></td></tr>))}</tbody></table></div></Card>
+        </>
       )}
     </PageTransition>
   );

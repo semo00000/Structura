@@ -6,22 +6,42 @@ import { databases, APPWRITE_CONFIG } from "@/lib/appwrite";
 import { useAuth } from "@/contexts/AuthContext";
 
 // ─── Types ──────────────────────────────────
-export type PlanTier = "Starter" | "Pro" | "Business";
+export type SubscriptionTier = "Core" | "Pro" | "Enterprise";
 
 interface PlanLimits {
   maxInvoicesPerMonth: number;
   stockEnabled: boolean;
-  watermark: boolean;
+  supplyChainConversion: boolean;
+  rbacEnabled: boolean;
+  advancedAnalytics: boolean;
 }
 
-const PLAN_LIMITS: Record<PlanTier, PlanLimits> = {
-  Starter: { maxInvoicesPerMonth: 50, stockEnabled: false, watermark: true },
-  Pro:     { maxInvoicesPerMonth: Infinity, stockEnabled: true, watermark: false },
-  Business:{ maxInvoicesPerMonth: Infinity, stockEnabled: true, watermark: false },
+const PLAN_LIMITS: Record<SubscriptionTier, PlanLimits> = {
+  Core: {
+    maxInvoicesPerMonth: 50,
+    stockEnabled: true,
+    supplyChainConversion: false,
+    rbacEnabled: false,
+    advancedAnalytics: false,
+  },
+  Pro: {
+    maxInvoicesPerMonth: Infinity,
+    stockEnabled: true,
+    supplyChainConversion: true,
+    rbacEnabled: false,
+    advancedAnalytics: false,
+  },
+  Enterprise: {
+    maxInvoicesPerMonth: Infinity,
+    stockEnabled: true,
+    supplyChainConversion: true,
+    rbacEnabled: true,
+    advancedAnalytics: true,
+  },
 };
 
 interface PlanContextType {
-  planTier: PlanTier;
+  subscriptionTier: SubscriptionTier;
   limits: PlanLimits;
   invoiceCountThisMonth: number;
   canCreateInvoice: boolean;
@@ -39,7 +59,7 @@ interface PlanContextType {
 const PlanContext = createContext<PlanContextType | undefined>(undefined);
 
 export function PlanProvider({ children }: { children: ReactNode }) {
-  const [planTier, setPlanTier] = useState<PlanTier>("Starter");
+  const [subscriptionTier, setSubscriptionTier] = useState<SubscriptionTier>("Pro");
   const [invoiceCountThisMonth, setInvoiceCountThisMonth] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -47,7 +67,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const [pendingTier, setPendingTier] = useState<string | null>(null);
 
   const { userId } = useAuth();
-  const limits = PLAN_LIMITS[planTier];
+  const limits = PLAN_LIMITS[subscriptionTier] || PLAN_LIMITS.Pro;
   const canCreateInvoice = invoiceCountThisMonth < limits.maxInvoicesPerMonth;
 
   const loadPlanAndCount = useCallback(async () => {
@@ -67,12 +87,8 @@ export function PlanProvider({ children }: { children: ReactNode }) {
 
       if (companyRes.documents[0]) {
         const doc = companyRes.documents[0] as Record<string, unknown>;
-        const tier = (doc.planTier as string) || "Starter";
-        if (tier === "Pro" || tier === "Business") {
-          setPlanTier(tier);
-        } else {
-          setPlanTier("Starter");
-        }
+        const tier = (doc.subscriptionTier as SubscriptionTier) || (doc.planTier as SubscriptionTier) || "Pro";
+        setSubscriptionTier(tier);
         setPaymentStatus((doc.paymentStatus as string) || null);
         setPendingTier((doc.pendingTier as string) || null);
       }
@@ -135,7 +151,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   return (
     <PlanContext.Provider
       value={{
-        planTier,
+        subscriptionTier,
         limits,
         invoiceCountThisMonth,
         canCreateInvoice,

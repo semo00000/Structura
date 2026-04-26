@@ -18,6 +18,12 @@ export interface CompanySettings {
   taxId: string;
   patente: string;
   cnss: string;
+  subscriptionTier: "Core" | "Pro" | "Enterprise";
+  // Financial & PRD
+  vatPct: number;
+  slogan: string;
+  bank: string;
+  rib: string;
   // Branding
   logoUrl: string;
   primaryColor: string;
@@ -43,8 +49,10 @@ type CompanyAction =
   | { type: "SET_COMPANY"; payload: CompanySettings }
   | { type: "UPDATE_GENERAL"; payload: Partial<CompanySettings> }
   | { type: "UPDATE_LEGAL"; payload: Partial<Pick<CompanySettings, "ice" | "rc" | "taxId" | "patente" | "cnss">> }
+  | { type: "UPDATE_FINANCIAL"; payload: Partial<Pick<CompanySettings, "vatPct" | "slogan" | "bank" | "rib">> }
   | { type: "UPDATE_BRANDING"; payload: Partial<Pick<CompanySettings, "logoUrl" | "primaryColor" | "defaultFooter">> }
-  | { type: "UPDATE_DOCUMENT_SETTINGS"; payload: Partial<CompanySettings["documentSettings"]> };
+  | { type: "UPDATE_DOCUMENT_SETTINGS"; payload: Partial<CompanySettings["documentSettings"]> }
+  | { type: "SET_SUBSCRIPTION_TIER"; payload: CompanySettings["subscriptionTier"] };
 
 // ─────────────────────────────────────────────
 // Default State (Demo / Single Tenant)
@@ -61,6 +69,11 @@ const defaultCompany: CompanySettings = {
   taxId: "12345678",
   patente: "PAT-2026-00123",
   cnss: "9876543",
+  subscriptionTier: "Pro",
+  vatPct: 20,
+  slogan: "Votre partenaire de confiance",
+  bank: "Attijariwafa Bank",
+  rib: "007 780 0000000000000000 11",
   logoUrl: "",
   primaryColor: "#2563EB",
   defaultFooter: "Merci pour votre confiance. Conditions de paiement : 30 jours net.",
@@ -100,6 +113,12 @@ function companyReducer(state: CompanyState, action: CompanyAction): CompanyStat
         company: { ...state.company, ...action.payload },
       };
 
+    case "UPDATE_FINANCIAL":
+      return {
+        ...state,
+        company: { ...state.company, ...action.payload },
+      };
+
     case "UPDATE_BRANDING":
       return {
         ...state,
@@ -116,6 +135,11 @@ function companyReducer(state: CompanyState, action: CompanyAction): CompanyStat
             ...action.payload,
           },
         },
+      };
+    case "SET_SUBSCRIPTION_TIER":
+      return {
+        ...state,
+        company: { ...state.company, subscriptionTier: action.payload },
       };
 
     default:
