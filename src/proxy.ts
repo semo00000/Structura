@@ -1,8 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
-// Using the project ID from env or fallback
-const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ?? "69e3ae46001bba40769f";
+// Using the project ID from env
+const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
 
 // Define sequences for protected routes
 const protectedPaths = [
@@ -23,6 +23,13 @@ const protectedPaths = [
 ];
 
 export function proxy(request: NextRequest) {
+  if (!projectId) {
+    console.error("Error: NEXT_PUBLIC_APPWRITE_PROJECT_ID is missing.");
+    // Fail securely: if we don't have the project ID, we cannot verify sessions.
+    // Redirect to an error page or return a 500 error.
+    return new NextResponse("Server Configuration Error", { status: 500 });
+  }
+
   const { pathname } = request.nextUrl;
   
   // 1. Check if the current path is protected

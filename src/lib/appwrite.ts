@@ -2,28 +2,38 @@
 
 import { Account, Client, Databases, Teams, Storage } from "appwrite";
 
-const endpoint =
-  process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ?? "https://cloud.appwrite.io/v1";
-const projectId =
-  process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ?? "69e3ae46001bba40769f";
-const databaseId =
-  process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID ?? "69e3b4e40016f9a896bb";
-const companyCollectionId =
-  process.env.NEXT_PUBLIC_APPWRITE_COMPANY_COLLECTION_ID ?? "companysettings";
-const documentsCollectionId =
-  process.env.NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID ?? "documents";
-const contactsCollectionId =
-  process.env.NEXT_PUBLIC_APPWRITE_CONTACTS_COLLECTION_ID ?? "contacts";
-const productsCollectionId =
-  process.env.NEXT_PUBLIC_APPWRITE_PRODUCTS_COLLECTION_ID ?? "products";
-const logosBucketId =
-  process.env.NEXT_PUBLIC_APPWRITE_LOGOS_BUCKET_ID ?? "logos";
-const receiptsBucketId =
-  process.env.NEXT_PUBLIC_APPWRITE_RECEIPTS_BUCKET_ID ?? "payment_receipts";
-const paymentsCollectionId =
-  process.env.NEXT_PUBLIC_APPWRITE_PAYMENTS_COLLECTION_ID ?? "payments";
-const paymentsAuditCollectionId =
-  process.env.NEXT_PUBLIC_APPWRITE_PAYMENTS_AUDIT_COLLECTION_ID ?? "payments_audit";
+const endpoint = process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT;
+const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+const databaseId = process.env.NEXT_PUBLIC_APPWRITE_DATABASE_ID;
+const companyCollectionId = process.env.NEXT_PUBLIC_APPWRITE_COMPANY_COLLECTION_ID;
+const documentsCollectionId = process.env.NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID;
+const contactsCollectionId = process.env.NEXT_PUBLIC_APPWRITE_CONTACTS_COLLECTION_ID;
+const productsCollectionId = process.env.NEXT_PUBLIC_APPWRITE_PRODUCTS_COLLECTION_ID;
+const logosBucketId = process.env.NEXT_PUBLIC_APPWRITE_LOGOS_BUCKET_ID;
+const receiptsBucketId = process.env.NEXT_PUBLIC_APPWRITE_RECEIPTS_BUCKET_ID;
+const paymentsCollectionId = process.env.NEXT_PUBLIC_APPWRITE_PAYMENTS_COLLECTION_ID;
+const paymentsAuditCollectionId = process.env.NEXT_PUBLIC_APPWRITE_PAYMENTS_AUDIT_COLLECTION_ID;
+
+// Validate all configuration
+const config = {
+  NEXT_PUBLIC_APPWRITE_ENDPOINT: endpoint,
+  NEXT_PUBLIC_APPWRITE_PROJECT_ID: projectId,
+  NEXT_PUBLIC_APPWRITE_DATABASE_ID: databaseId,
+  NEXT_PUBLIC_APPWRITE_COMPANY_COLLECTION_ID: companyCollectionId,
+  NEXT_PUBLIC_APPWRITE_DOCUMENTS_COLLECTION_ID: documentsCollectionId,
+  NEXT_PUBLIC_APPWRITE_CONTACTS_COLLECTION_ID: contactsCollectionId,
+  NEXT_PUBLIC_APPWRITE_PRODUCTS_COLLECTION_ID: productsCollectionId,
+  NEXT_PUBLIC_APPWRITE_LOGOS_BUCKET_ID: logosBucketId,
+  NEXT_PUBLIC_APPWRITE_RECEIPTS_BUCKET_ID: receiptsBucketId,
+  NEXT_PUBLIC_APPWRITE_PAYMENTS_COLLECTION_ID: paymentsCollectionId,
+  NEXT_PUBLIC_APPWRITE_PAYMENTS_AUDIT_COLLECTION_ID: paymentsAuditCollectionId,
+};
+
+Object.entries(config).forEach(([key, value]) => {
+  if (!value) {
+    throw new Error(`Missing required Appwrite configuration: ${key}`);
+  }
+});
 
 const client = new Client();
 
@@ -41,17 +51,17 @@ const teams = new Teams(client);
 const storage = new Storage(client);
 
 const APPWRITE_CONFIG = {
-  endpoint,
-  projectId,
-  databaseId,
-  companyCollectionId,
-  documentsCollectionId,
-  contactsCollectionId,
-  productsCollectionId,
-  logosBucketId,
-  receiptsBucketId,
-  paymentsCollectionId,
-  paymentsAuditCollectionId,
+  endpoint: endpoint!,
+  projectId: projectId!,
+  databaseId: databaseId!,
+  companyCollectionId: companyCollectionId!,
+  documentsCollectionId: documentsCollectionId!,
+  contactsCollectionId: contactsCollectionId!,
+  productsCollectionId: productsCollectionId!,
+  logosBucketId: logosBucketId!,
+  receiptsBucketId: receiptsBucketId!,
+  paymentsCollectionId: paymentsCollectionId!,
+  paymentsAuditCollectionId: paymentsAuditCollectionId!,
 };
 
 export { client, account, databases, teams, storage, APPWRITE_CONFIG };
