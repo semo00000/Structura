@@ -18,6 +18,7 @@ import {
 
 export interface NavItem {
   title: string;
+  translationKey: string;
   href: string;
   icon: LucideIcon;
   /** Minimum plan tier required to access this item. If omitted, available to all. */
@@ -33,45 +34,45 @@ export const navigation: NavGroup[] = [
   {
     label: "Général",
     items: [
-      { title: "Tableau de bord", href: "/dashboard", icon: LayoutDashboard },
-      { title: "Statistiques", href: "/statistiques", icon: BarChart3 },
-      { title: "Suivi Paiements", href: "/suivi-paiements", icon: CreditCard },
+      { title: "Tableau de bord", translationKey: "dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { title: "Statistiques", translationKey: "statistics", href: "/statistiques", icon: BarChart3 },
+      { title: "Suivi Paiements", translationKey: "payments", href: "/suivi-paiements", icon: CreditCard },
     ],
   },
   {
     label: "Ventes",
     items: [
-      { title: "Devis", href: "/devis", icon: FileText },
-      { title: "Factures", href: "/factures", icon: FilePlus },
-      { title: "Avoirs", href: "/avoirs", icon: FileCheck },
-      { title: "Bons de livraison", href: "/bons-livraison", icon: Truck },
+      { title: "Devis", translationKey: "quotes", href: "/devis", icon: FileText },
+      { title: "Factures", translationKey: "invoices", href: "/factures", icon: FilePlus },
+      { title: "Avoirs", translationKey: "creditNotes", href: "/avoirs", icon: FileCheck },
+      { title: "Bons de livraison", translationKey: "deliveryNotes", href: "/bons-livraison", icon: Truck },
     ],
   },
   {
     label: "Achats",
     items: [
-      { title: "Bons de commande", href: "/bons-commande", icon: ShoppingCart },
+      { title: "Bons de commande", translationKey: "purchaseOrders", href: "/bons-commande", icon: ShoppingCart },
     ],
   },
   {
     label: "Gestion",
     items: [
-      { title: "Clients", href: "/clients", icon: Users },
-      { title: "Fournisseurs", href: "/fournisseurs", icon: Building2 },
-      { title: "Produits & Services", href: "/produits", icon: Box },
-      { title: "Stock", href: "/stock", icon: Package, requiresPlan: "Pro" },
+      { title: "Clients", translationKey: "clients", href: "/clients", icon: Users },
+      { title: "Fournisseurs", translationKey: "suppliers", href: "/fournisseurs", icon: Building2 },
+      { title: "Produits & Services", translationKey: "products", href: "/produits", icon: Box },
+      { title: "Stock", translationKey: "inventory", href: "/stock", icon: Package, requiresPlan: "Pro" },
     ],
   },
   {
     label: "Abonnement",
     items: [
-      { title: "Mon Abonnement", href: "/abonnement", icon: Crown },
+      { title: "Mon Abonnement", translationKey: "subscription", href: "/abonnement", icon: Crown },
     ],
   },
   {
     label: "Configuration",
     items: [
-      { title: "Paramètres", href: "/parametres", icon: Settings },
+      { title: "Paramètres", translationKey: "settings", href: "/parametres", icon: Settings },
     ],
   },
 ];

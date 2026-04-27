@@ -18,6 +18,7 @@ import {
 import { useSidebar, SIDEBAR_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from "@/contexts/SidebarContext";
 import { usePlan } from "@/contexts/PlanContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ChevronLeft, Crown, Loader2, Lock, LogIn, LogOut } from "lucide-react";
 
 // ─── Sidebar nav content (shared between desktop + mobile) ───
@@ -26,8 +27,9 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { collapsed, isMobile } = useSidebar();
   const { subscriptionTier, setShowUpgradeModal } = usePlan();
+  const { t } = useLanguage();
 
-  const TIER_ORDER: Record<string, number> = { Pro: 1, Business: 2 };
+  const TIER_ORDER: Record<string, number> = { Core: 0, Pro: 1, Enterprise: 2 };
   const userTierLevel = TIER_ORDER[subscriptionTier] ?? 1;
   const isExpanded = isMobile || !collapsed;
 
@@ -49,6 +51,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                 (pathname === item.href ||
                   (item.href !== "/dashboard" && pathname.startsWith(item.href)));
               const Icon = item.icon;
+              const title = t.nav[item.translationKey as keyof typeof t.nav] || item.title;
 
               if (isLocked) {
                 const lockedContent = (
@@ -64,7 +67,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     <Lock className="size-[17px] shrink-0 text-sidebar-foreground/25" />
                     {isExpanded && (
                       <span className="flex flex-1 items-center justify-between truncate">
-                        <span>{item.title}</span>
+                        <span>{title}</span>
                         <span className="ml-2 flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400/20 to-amber-500/20 px-2 py-0.5 text-[10px] font-bold text-amber-600">
                           <Crown className="size-2.5" />
                           PRO
@@ -80,7 +83,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                       <Tooltip>
                         <TooltipTrigger render={lockedContent} />
                         <TooltipContent side="right" className="font-medium">
-                          {item.title} <span className="text-amber-500">(Pro)</span>
+                          {title} <span className="text-amber-500">(Pro)</span>
                         </TooltipContent>
                       </Tooltip>
                     </li>
@@ -110,7 +113,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                         : "text-sidebar-foreground/40 group-hover:text-sidebar-foreground/70"
                     )}
                   />
-                  {isExpanded && <span className="truncate">{item.title}</span>}
+                  {isExpanded && <span className="truncate">{title}</span>}
                 </Link>
               );
 
@@ -120,7 +123,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                     <Tooltip>
                       <TooltipTrigger render={linkContent} />
                       <TooltipContent side="right" className="font-medium">
-                        {item.title}
+                        {title}
                       </TooltipContent>
                     </Tooltip>
                   </li>
@@ -141,6 +144,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 function SidebarFooter({ variant }: { variant: "desktop" | "mobile" }) {
   const { collapsed, isMobile } = useSidebar();
   const { email: userEmail, authState, handleLogout } = useAuth();
+  const { t } = useLanguage();
   const isAuthenticated = authState === "authed";
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const isExpanded = variant === "mobile" || !collapsed;
@@ -159,45 +163,29 @@ function SidebarFooter({ variant }: { variant: "desktop" | "mobile" }) {
       <div className="border-t border-sidebar-border p-3">
         {isAuthenticated ? (
           <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                  onClick={() => void performLogout()}
-                  disabled={isLoggingOut}
-                />
-              }
-            >
-              {isLoggingOut ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <LogOut className="size-4" />
-              )}
-            </TooltipTrigger>
+            <TooltipTrigger render={<Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                onClick={() => void performLogout()}
+                disabled={isLoggingOut}
+              />} />
             <TooltipContent side="right" className="font-medium">
-              Déconnexion
+              {t.nav.logout}
             </TooltipContent>
           </Tooltip>
         ) : (
           <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                  nativeButton={false}
-                  render={<Link href="/login" />}
-                />
-              }
-            >
-              <LogIn className="size-4" />
-            </TooltipTrigger>
+            <TooltipTrigger render={<Button
+                variant="ghost"
+                size="icon-sm"
+                className="w-full text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                nativeButton={false}
+                render={<Link href="/login" />}
+              ><LogIn className="size-4" /></Button>} />
             <TooltipContent side="right" className="font-medium">
-              Connexion
+              {t.nav.login}
             </TooltipContent>
           </Tooltip>
         )}
@@ -229,12 +217,12 @@ function SidebarFooter({ variant }: { variant: "desktop" | "mobile" }) {
             {isLoggingOut ? (
               <>
                 <Loader2 className="size-3.5 animate-spin" />
-                Déconnexion...
+                {t.common.loading}
               </>
             ) : (
               <>
                 <LogOut className="size-3.5" />
-                Déconnexion
+                {t.nav.logout}
               </>
             )}
           </Button>
@@ -246,7 +234,7 @@ function SidebarFooter({ variant }: { variant: "desktop" | "mobile" }) {
             render={<Link href="/login" />}
           >
             <LogIn className="size-3.5" />
-            Connexion
+            {t.nav.login}
           </Button>
         )}
       </div>

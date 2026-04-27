@@ -1,0 +1,24 @@
+
+> structura@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.4 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+- Environments: .env.local
+✓ Ready in 530ms
+
+ GET / 200 in 942ms (next.js: 160ms, proxy.ts: 251ms, application-code: 531ms)
+ GET /login?next=%2F 200 in 153ms (next.js: 27ms, proxy.ts: 10ms, application-code: 116ms)
+ GET /login 200 in 86ms (next.js: 6ms, proxy.ts: 8ms, application-code: 73ms)
+ GET / 200 in 75ms (next.js: 5ms, proxy.ts: 6ms, application-code: 64ms)
+ GET /login?next=%2F 200 in 85ms (next.js: 4ms, proxy.ts: 9ms, application-code: 72ms)
+ GET / 200 in 73ms (next.js: 4ms, proxy.ts: 6ms, application-code: 63ms)
+ GET /login?next=%2F 200 in 80ms (next.js: 4ms, proxy.ts: 10ms, application-code: 67ms)
+✓ Compiled in 978ms
+ GET / 200 in 230ms (next.js: 8ms, proxy.ts: 127ms, application-code: 96ms)
+ GET /login?next=%2F 200 in 86ms (next.js: 5ms, proxy.ts: 5ms, application-code: 76ms)
+ GET / 200 in 136ms (next.js: 8ms, proxy.ts: 11ms, application-code: 117ms)
+ GET /login?next=%2F 200 in 182ms (next.js: 7ms, proxy.ts: 9ms, application-code: 166ms)
+ GET / 200 in 78ms (next.js: 6ms, proxy.ts: 6ms, application-code: 67ms)
+ GET /login?next=%2F 200 in 72ms (next.js: 4ms, proxy.ts: 6ms, application-code: 62ms)

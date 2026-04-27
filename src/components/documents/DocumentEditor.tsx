@@ -595,7 +595,7 @@ export function DocumentEditor({ type, documentId }: DocumentEditorProps) {
       ice: client.ice
     } : { name: "Client Inconnu" };
 
-    await generateDocumentPDF(successDocument, companyProfile, mappedClient, { planTier: subscriptionTier });
+    await generateDocumentPDF(successDocument, companyProfile, mappedClient, { subscriptionTier });
   }
 
   // ═══════════════════════════════════════════

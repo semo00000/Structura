@@ -153,7 +153,7 @@ export function TeamManagement() {
               </div>
               <div className="w-full space-y-2 md:w-48">
                 <Label htmlFor="role">Rôle</Label>
-                <Select value={inviteRole} onValueChange={(val) => setInviteRole(val || "EMPLOYEE")}>
+                <Select value={inviteRole} onValueChange={(val) => setInviteRole(val || "Commercial")}>
                   <SelectTrigger id="role">
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>
@@ -225,7 +225,7 @@ export function TeamManagement() {
                       </TableCell>
                       <TableCell>
                         {member.joined ? (
-                          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200">Actif</Badge>
+                          <Badge variant="default" className="bg-green-500/10 text-green-700 hover:bg-green-500/20">Actif</Badge>
                         ) : (
                           <Badge variant="outline" className="animate-pulse">En attente</Badge>
                         )}

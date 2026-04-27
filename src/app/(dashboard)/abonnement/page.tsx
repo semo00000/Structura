@@ -102,7 +102,7 @@ export default function AbonnementPage() {
             </div>
             <div>
               <p className="text-xs font-medium text-blue-600 uppercase tracking-wider">Plan Actuel</p>
-              <p className="text-lg font-bold text-slate-900">{subscriptionTier}</p>
+              <p className="text-lg font-bold text-slate-900">{subscriptionTier === "Pro" ? "Pro" : subscriptionTier === "Enterprise" ? "Enterprise" : "Starter"}</p>
             </div>
           </div>
         </div>
@@ -272,8 +272,8 @@ export default function AbonnementPage() {
             </div>
 
             {/* Business Plan */}
-            <div className={`relative flex flex-col rounded-2xl border ${subscriptionTier === "Pro" ? "border-slate-800 dark:border-slate-500 shadow-xl ring-2 ring-slate-800 dark:ring-slate-500" : "border-slate-200 dark:border-border"} bg-muted/50 p-6 sm:p-8`}>
-              {subscriptionTier === "Pro" && (
+            <div className={`relative flex flex-col rounded-2xl border ${subscriptionTier === "Enterprise" ? "border-slate-800 dark:border-slate-500 shadow-xl ring-2 ring-slate-800 dark:ring-slate-500" : "border-slate-200 dark:border-border"} bg-muted/50 p-6 sm:p-8`}>
+              {subscriptionTier === "Enterprise" && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-full">
                   Plan Actuel
                 </div>
@@ -304,11 +304,11 @@ export default function AbonnementPage() {
               </ul>
 
               <div className="mt-8">
-                {subscriptionTier === "Pro" ? (
+                {subscriptionTier === "Enterprise" ? (
                   <Button variant="outline" className="w-full border-slate-800 text-slate-800" disabled>Plan Actuel</Button>
                 ) : (
                   <Button 
-                    onClick={() => setSelectedTier("Pro")}
+                    onClick={() => setSelectedTier("Enterprise")}
                     className="w-full bg-slate-800 hover:bg-slate-900 text-white"
                     disabled={isPending}
                   >

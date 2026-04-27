@@ -7,6 +7,7 @@ import { CompanyProvider } from "@/contexts/CompanyContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ToastProvider } from "@/hooks/use-toast";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import "./globals.css";
 
 const inter = Inter({
@@ -53,17 +54,19 @@ export default function RootLayout({
         <ToastProvider>
           <AuthProvider>
             <CompanyProvider>
-              <TooltipProvider>
-                <ThemeProvider
-                  attribute="class"
-                  defaultTheme="system"
-                  enableSystem
-                  disableTransitionOnChange
-                >
-                  {children}
-                  <Toaster />
-                </ThemeProvider>
-              </TooltipProvider>
+              <LanguageProvider>
+                <TooltipProvider>
+                  <ThemeProvider
+                    attribute="class"
+                    defaultTheme="system"
+                    enableSystem
+                    disableTransitionOnChange
+                  >
+                    {children}
+                    <Toaster />
+                  </ThemeProvider>
+                </TooltipProvider>
+              </LanguageProvider>
             </CompanyProvider>
           </AuthProvider>
         </ToastProvider>

@@ -202,7 +202,7 @@ export default function FacturesPage() {
       ice: doc.contact.ice,
     };
     
-    await generateDocumentPDF(docData as any, companyProfile, contactData, { planTier: "PRO" });
+    await generateDocumentPDF(docData as any, companyProfile, contactData, { subscriptionTier: "PRO" });
   }
 
   const filteredDocuments = React.useMemo(() => {

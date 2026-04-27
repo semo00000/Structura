@@ -226,7 +226,7 @@ export function DownloadPDFButton({
       size="sm"
       className="gap-2 text-xs"
       onClick={() =>
-        generateDocumentPDF(normalizedDocument, mappedCompany, contact || { name: "Client Inconnu" }, { planTier: subscriptionTier })
+        generateDocumentPDF(normalizedDocument, mappedCompany, contact || { name: "Client Inconnu" }, { subscriptionTier })
       }
     >
       <Download className="size-3.5" />

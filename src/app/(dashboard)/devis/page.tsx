@@ -158,7 +158,7 @@ export default function DevisPage() {
       { type: "DEVIS", number: doc.number, date: new Date(doc.date), dueDate: doc.dueDate ? new Date(doc.dueDate) : null, totalHT: doc.totalHT, totalTVA: doc.totalTVA, totalTTC: doc.totalTTC, notes: doc.notes, footer: doc.footer, lines } as any,
       companyProfile,
       { name: doc.contact.name, companyName: doc.contact.companyName, city: doc.contact.city, ice: doc.contact.ice },
-      { planTier: "PRO" }
+      { subscriptionTier: "PRO" }
     );
   }
 

@@ -37,7 +37,7 @@ import {
   Trash2,
   CircleDot,
   MessageCircle,
-  Lock as LockIcon,
+  Lock,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────
@@ -229,7 +229,7 @@ export function DocumentActionsMenu({
               <DropdownMenuSub>
                 <DropdownMenuSubTrigger disabled={!limits.supplyChainConversion}>
                   <ArrowRightLeft className="mr-2 size-4" />
-                  Convertir {!limits.supplyChainConversion && <LockIcon className="ml-auto size-3" />}
+                  Convertir {!limits.supplyChainConversion && <Lock className="ml-auto size-3" />}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent>
                   {meta.convertibleTo.map((conv) => (
