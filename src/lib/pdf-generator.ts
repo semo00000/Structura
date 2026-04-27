@@ -104,7 +104,7 @@ export async function generateDocumentPDF(
   document: DocumentData,
   company: CompanyInfo,
   contact: ContactInfo,
-  options?: { planTier?: string }
+  options?: { subscriptionTier?: string }
 ) {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -361,7 +361,7 @@ export async function generateDocumentPDF(
   }
 
   // Structura Watermark for Core users
-  if (options?.planTier === "Core") {
+  if (options?.subscriptionTier === "Core") {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.setTextColor(COLORS.textLight);
