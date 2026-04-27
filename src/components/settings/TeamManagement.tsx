@@ -153,7 +153,7 @@ export function TeamManagement() {
               </div>
               <div className="w-full space-y-2 md:w-48">
                 <Label htmlFor="role">Rôle</Label>
-                <Select value={inviteRole} onValueChange={(val) => setInviteRole(val || "")}>
+                <Select value={inviteRole} onValueChange={(val) => setInviteRole(val || "Commercial")}>
                   <SelectTrigger id="role">
                     <SelectValue placeholder="Sélectionner" />
                   </SelectTrigger>

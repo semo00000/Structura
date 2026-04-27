@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { teams } from "@/lib/appwrite";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle, XCircle } from "lucide-react";
 import Link from "next/link";
@@ -69,13 +69,13 @@ function AcceptInviteContent() {
         </CardContent>
         <CardFooter className="flex justify-center">
           {status === "success" ? (
-            <Button className="w-full" nativeButton={false} render={<Link href="/dashboard" />}>
+            <Link href="/dashboard" className={buttonVariants({ variant: "default" }) + " w-full"}>
               Accéder au Dashboard
-            </Button>
+            </Link>
           ) : status === "error" ? (
-            <Button variant="outline" className="w-full" nativeButton={false} render={<Link href="/login" />}>
+            <Link href="/login" className={buttonVariants({ variant: "outline" }) + " w-full"}>
               Retour à la connexion
-            </Button>
+            </Link>
           ) : null}
         </CardFooter>
       </Card>

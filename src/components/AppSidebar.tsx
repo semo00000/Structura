@@ -29,7 +29,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { subscriptionTier, setShowUpgradeModal } = usePlan();
   const { t } = useLanguage();
 
-  const TIER_ORDER: Record<string, number> = { Pro: 1, Business: 2 };
+  const TIER_ORDER: Record<string, number> = { Core: 0, Pro: 1, Enterprise: 2 };
   const userTierLevel = TIER_ORDER[subscriptionTier] ?? 1;
   const isExpanded = isMobile || !collapsed;
 

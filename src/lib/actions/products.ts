@@ -1,7 +1,7 @@
 "use server";
 
 // Server Actions for Products & Services
-// These will persist to PostgreSQL via Prisma when the DB is connected.
+// These will persist to the database.
 
 import { productSchema } from "@/lib/validations/product";
 

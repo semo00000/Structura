@@ -1,7 +1,7 @@
 "use server";
 
 // Server Actions for Company settings
-// These will persist to PostgreSQL via Prisma when the DB is connected.
+// These will persist to the database.
 // For now, actions return success responses to enable client-side state updates.
 
 import { companyGeneralSchema, companyLegalSchema, companyBrandSchema, documentSettingsSchema } from "@/lib/validations/company";
@@ -12,8 +12,7 @@ export async function updateCompanyGeneral(formData: unknown) {
     return { success: false, error: parsed.error.flatten().fieldErrors };
   }
 
-  // TODO: Persist to database when PostgreSQL is connected
-  // await prisma.company.update({ where: { id }, data: parsed.data });
+  // TODO: Persist to database
 
   return { success: true, data: parsed.data };
 }
