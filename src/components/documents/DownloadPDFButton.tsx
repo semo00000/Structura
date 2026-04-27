@@ -144,7 +144,7 @@ export function DownloadPDFButton({
   document: Record<string, unknown>;
   contact?: DownloadPdfContact | null;
 }) {
-  const { planTier } = usePlan();
+  const { subscriptionTier } = usePlan();
   const [company, setCompany] = React.useState<CompanyProfile>(
     fallbackCompanyProfile()
   );
@@ -226,7 +226,7 @@ export function DownloadPDFButton({
       size="sm"
       className="gap-2 text-xs"
       onClick={() =>
-        generateDocumentPDF(normalizedDocument, mappedCompany, contact || { name: "Client Inconnu" }, { planTier })
+        generateDocumentPDF(normalizedDocument, mappedCompany, contact || { name: "Client Inconnu" }, { subscriptionTier })
       }
     >
       <Download className="size-3.5" />

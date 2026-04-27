@@ -37,6 +37,11 @@ export function proxy(request: NextRequest) {
     pathname === path || pathname.startsWith(`${path}/`)
   );
 
+  // Explicitly allow the root path /
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
+
   if (!isProtected) {
     return NextResponse.next();
   }

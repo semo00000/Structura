@@ -287,7 +287,7 @@ export default function SuiviPaiementsPage() {
               <Select
                 value={selectedContactId}
                 onValueChange={(val) => {
-                  setSelectedContactId(val);
+                  setSelectedContactId(val || "");
                   setSuccessResult(null);
                   setError(null);
                 }}

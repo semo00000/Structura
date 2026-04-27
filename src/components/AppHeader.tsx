@@ -18,6 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { navigation } from "@/lib/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import NextLink from "next/link";
 
 function getPageTitle(pathname: string): string {
@@ -80,6 +81,9 @@ export function AppHeader() {
           <CalendarDays className="size-3" />
           <span className="capitalize">{today}</span>
         </Badge>
+
+        {/* Language Switcher */}
+        <LanguageSwitcher />
 
         {/* Theme Toggle */}
         <ThemeToggle />

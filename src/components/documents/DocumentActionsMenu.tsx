@@ -37,6 +37,7 @@ import {
   Trash2,
   CircleDot,
   MessageCircle,
+  Lock,
 } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────

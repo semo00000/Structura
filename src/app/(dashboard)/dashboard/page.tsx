@@ -17,6 +17,7 @@ import {
 
 import { APPWRITE_CONFIG, databases } from "@/lib/appwrite";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { formatMAD } from "@/lib/validations/document";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,6 +110,7 @@ function RowSkeleton() {
 
 export default function DashboardPage() {
   const { userId } = useAuth();
+  const { t } = useLanguage();
   const [invoices, setInvoices] = React.useState<InvoiceDoc[]>([]);
   const [contacts, setContacts] = React.useState<ContactDoc[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -316,10 +318,10 @@ export default function DashboardPage() {
             </Card>
 
             {/* Revenue */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  Chiffre d&apos;affaires
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {t.dashboard.totalRevenue}
                 </CardTitle>
                 <div className="flex size-9 items-center justify-center rounded-lg bg-primary/10">
                   <TrendingUp className="size-4 text-primary" />
@@ -330,17 +332,16 @@ export default function DashboardPage() {
                   {fmtMAD(metrics.totalRevenue)}
                 </div>
                 <p className="mt-0.5 text-[10px] text-muted-foreground md:text-xs">
-                  {metrics.totalInvoices} facture{metrics.totalInvoices > 1 ? "s" : ""}
+                  {metrics.totalInvoices} {t.dashboard.invoicesCount}
                 </p>
               </CardContent>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary/40 to-primary/0" />
             </Card>
 
             {/* Cash Received */}
-            <Card className="relative overflow-hidden">
+            <Card className="relative overflow-hidden shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  Encaissements
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {t.dashboard.cashReceived}
                 </CardTitle>
                 <div className="flex size-9 items-center justify-center rounded-lg bg-emerald-100">
                   <Banknote className="size-4 text-emerald-700" />
@@ -351,17 +352,16 @@ export default function DashboardPage() {
                   {fmtMAD(metrics.totalPaid)}
                 </div>
                 <p className="mt-0.5 text-[10px] text-muted-foreground md:text-xs">
-                  Total reçu
+                  {t.dashboard.totalReceived}
                 </p>
               </CardContent>
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-emerald-400/40 to-emerald-200/0" />
             </Card>
 
             {/* Overdue */}
-            <Card className={`relative overflow-hidden ${metrics.overdueCount > 0 ? "border-red-200/60 dark:border-red-900/40 bg-gradient-to-br from-red-50/60 to-white dark:from-red-950/40 dark:to-background" : ""}`}>
+            <Card className={`relative overflow-hidden shadow-sm ${metrics.overdueCount > 0 ? "border-red-200/60 dark:border-red-900/40 bg-red-50/30 dark:bg-red-950/20" : ""}`}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-xs font-medium text-muted-foreground">
-                  En retard
+                <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {t.dashboard.overdue}
                 </CardTitle>
                 <div className={`flex size-9 items-center justify-center rounded-lg ${metrics.overdueCount > 0 ? "bg-red-100" : "bg-muted"}`}>
                   <Clock className={`size-4 ${metrics.overdueCount > 0 ? "text-red-600" : "text-muted-foreground"}`} />
@@ -373,13 +373,10 @@ export default function DashboardPage() {
                 </div>
                 <p className="mt-0.5 text-[10px] text-muted-foreground md:text-xs">
                   {metrics.overdueCount > 0
-                    ? `${metrics.overdueCount} facture${metrics.overdueCount > 1 ? "s" : ""} en retard`
-                    : "Aucune facture en retard"}
+                    ? `${metrics.overdueCount} ${t.dashboard.overdueInvoices}`
+                    : t.dashboard.noOverdue}
                 </p>
               </CardContent>
-              {metrics.overdueCount > 0 && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-red-400 to-red-200" />
-              )}
             </Card>
           </>
         )}
@@ -388,16 +385,16 @@ export default function DashboardPage() {
       {/* Bottom section: Top Debtors + Recent Invoices */}
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Top Debtors — THE money card */}
-        <Card>
-          <CardHeader className="border-b pb-3">
+        <Card className="shadow-sm">
+          <CardHeader className="border-b pb-3 bg-muted/20">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <Users className="size-4 text-amber-600" />
-                Top débiteurs
+                {t.dashboard.topDebtors}
               </CardTitle>
               {!isLoading && (
                 <Badge variant="secondary" className="text-[10px]">
-                  {metrics.topDebtors.length} client{metrics.topDebtors.length > 1 ? "s" : ""}
+                  {metrics.topDebtors.length} {t.dashboard.clientsCount}
                 </Badge>
               )}
             </div>
@@ -415,10 +412,10 @@ export default function DashboardPage() {
                   <Banknote className="size-5 text-emerald-500" />
                 </div>
                 <p className="text-sm font-medium text-emerald-700">
-                  Aucune dette en cours
+                  {t.dashboard.noDebt}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Tous vos clients sont à jour. 🎉
+                  {t.dashboard.noDebtDesc}
                 </p>
               </div>
             ) : (
@@ -450,16 +447,16 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Invoices */}
-        <Card>
-          <CardHeader className="border-b pb-3">
+        <Card className="shadow-sm">
+          <CardHeader className="border-b pb-3 bg-muted/20">
             <div className="flex items-center justify-between">
               <CardTitle className="flex items-center gap-2 text-sm">
                 <FileText className="size-4 text-primary" />
-                Factures récentes
+                {t.dashboard.recentInvoices}
               </CardTitle>
               {!isLoading && (
                 <Badge variant="secondary" className="text-[10px]">
-                  {metrics.recentInvoices.length} dernières
+                  {metrics.recentInvoices.length} {t.dashboard.latestCount}
                 </Badge>
               )}
             </div>
@@ -477,10 +474,10 @@ export default function DashboardPage() {
                   <FileText className="size-5 text-primary" />
                 </div>
                 <p className="text-sm font-medium">
-                  Aucune facture
+                  {t.dashboard.noInvoices}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Créez votre première facture pour commencer.
+                  {t.dashboard.createFirstInvoice}
                 </p>
               </div>
             ) : (
@@ -498,7 +495,7 @@ export default function DashboardPage() {
                           variant={isPaid ? "default" : inv.totalPaid > 0 ? "secondary" : "outline"}
                           className="w-16 justify-center text-[10px]"
                         >
-                          {isPaid ? "PAYÉE" : inv.totalPaid > 0 ? "PARTIEL" : "DUE"}
+                          {isPaid ? t.status.paid : inv.totalPaid > 0 ? t.status.partial : t.status.due}
                         </Badge>
                         <div>
                           <p className="font-mono text-xs font-medium">{inv.number}</p>
@@ -513,7 +510,7 @@ export default function DashboardPage() {
                         </p>
                         {!isPaid && (
                           <p className="font-mono text-[10px] tabular-nums text-amber-700">
-                            Reste: {fmtMAD(remaining)}
+                            {t.dashboard.remaining} {fmtMAD(remaining)}
                           </p>
                         )}
                       </div>
