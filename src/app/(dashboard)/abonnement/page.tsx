@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePlan, PlanTier } from "@/contexts/PlanContext";
+import { usePlan, SubscriptionTier } from "@/contexts/PlanContext";
 import { Crown, Check, Zap, Shield, Loader2, Sparkles, Building, UploadCloud, ArrowRight, CreditCard, Info } from "lucide-react";
 import { databases, storage, APPWRITE_CONFIG } from "@/lib/appwrite";
 import { useAuth } from "@/contexts/AuthContext";
@@ -14,10 +14,10 @@ import { Input } from "@/components/ui/input";
 
 export default function AbonnementPage() {
   const { userId } = useAuth();
-  const { planTier, limits, invoiceCountThisMonth, paymentStatus, pendingTier, refreshPlan } = usePlan();
+  const { subscriptionTier, limits, invoiceCountThisMonth, paymentStatus, pendingTier, refreshPlan } = usePlan();
   const router = useRouter();
   
-  const [selectedTier, setSelectedTier] = useState<PlanTier | null>(null);
+  const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -98,11 +98,11 @@ export default function AbonnementPage() {
           
           <div className="flex items-center gap-3 px-5 py-3 rounded-xl bg-blue-50 border border-blue-100">
             <div className="size-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-              {planTier === "Pro" ? <Zap className="size-5" /> : <Shield className="size-5" />}
+              {subscriptionTier === "Pro" ? <Zap className="size-5" /> : <Shield className="size-5" />}
             </div>
             <div>
               <p className="text-xs font-medium text-blue-600 uppercase tracking-wider">Plan Actuel</p>
-              <p className="text-lg font-bold text-slate-900">{planTier}</p>
+              <p className="text-lg font-bold text-slate-900">{subscriptionTier}</p>
             </div>
           </div>
         </div>
@@ -219,8 +219,8 @@ export default function AbonnementPage() {
           <h2 className="text-xl font-bold tracking-tight text-slate-900 mb-6">Plans Disponibles</h2>
           
           <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            <div className={`relative flex flex-col rounded-2xl border ${planTier === "Pro" ? "border-[#2563EB] shadow-xl ring-2 ring-[#2563EB]" : "border-blue-200 dark:border-border shadow-md"} bg-card p-6 sm:p-8`}>
-              {planTier === "Pro" ? (
+            <div className={`relative flex flex-col rounded-2xl border ${subscriptionTier === "Pro" ? "border-[#2563EB] shadow-xl ring-2 ring-[#2563EB]" : "border-blue-200 dark:border-border shadow-md"} bg-card p-6 sm:p-8`}>
+              {subscriptionTier === "Pro" ? (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#2563EB] text-white text-xs font-bold uppercase tracking-wider rounded-full flex gap-1 items-center">
                   <Crown className="size-3" />
                   Plan Actuel
@@ -257,7 +257,7 @@ export default function AbonnementPage() {
               </ul>
 
               <div className="mt-8">
-                {planTier === "Pro" ? (
+                {subscriptionTier === "Pro" ? (
                   <Button variant="outline" className="w-full border-[#2563EB] text-[#2563EB]" disabled>Plan Actuel</Button>
                 ) : (
                   <Button 
@@ -272,8 +272,8 @@ export default function AbonnementPage() {
             </div>
 
             {/* Business Plan */}
-            <div className={`relative flex flex-col rounded-2xl border ${planTier === "Business" ? "border-slate-800 dark:border-slate-500 shadow-xl ring-2 ring-slate-800 dark:ring-slate-500" : "border-slate-200 dark:border-border"} bg-muted/50 p-6 sm:p-8`}>
-              {planTier === "Business" && (
+            <div className={`relative flex flex-col rounded-2xl border ${subscriptionTier === "Pro" ? "border-slate-800 dark:border-slate-500 shadow-xl ring-2 ring-slate-800 dark:ring-slate-500" : "border-slate-200 dark:border-border"} bg-muted/50 p-6 sm:p-8`}>
+              {subscriptionTier === "Pro" && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-800 text-white text-xs font-bold uppercase tracking-wider rounded-full">
                   Plan Actuel
                 </div>
@@ -304,11 +304,11 @@ export default function AbonnementPage() {
               </ul>
 
               <div className="mt-8">
-                {planTier === "Business" ? (
+                {subscriptionTier === "Pro" ? (
                   <Button variant="outline" className="w-full border-slate-800 text-slate-800" disabled>Plan Actuel</Button>
                 ) : (
                   <Button 
-                    onClick={() => setSelectedTier("Business")} 
+                    onClick={() => setSelectedTier("Pro")}
                     className="w-full bg-slate-800 hover:bg-slate-900 text-white"
                     disabled={isPending}
                   >

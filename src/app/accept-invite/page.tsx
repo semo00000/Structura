@@ -69,13 +69,13 @@ function AcceptInviteContent() {
         </CardContent>
         <CardFooter className="flex justify-center">
           {status === "success" ? (
-            <Button asChild className="w-full">
-              <Link href="/dashboard">Accéder au Dashboard</Link>
-            </Button>
+            <Link href="/dashboard" className="w-full">
+              <Button className="w-full">Accéder au Dashboard</Button>
+            </Link>
           ) : status === "error" ? (
-            <Button asChild variant="outline" className="w-full">
-              <Link href="/login">Retour à la connexion</Link>
-            </Button>
+            <Link href="/login" className="w-full">
+              <Button variant="outline" className="w-full">Retour à la connexion</Button>
+            </Link>
           ) : null}
         </CardFooter>
       </Card>

@@ -294,7 +294,7 @@ export function DocumentEditor({ type, documentId }: DocumentEditorProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { userId } = useAuth();
-  const { planTier, checkInvoiceLimit, refreshCount } = usePlan();
+  const { subscriptionTier, checkInvoiceLimit, refreshCount } = usePlan();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string | null>(null);
   const [companyProfile, setCompanyProfile] = React.useState<CompanyProfile>(
@@ -595,7 +595,7 @@ export function DocumentEditor({ type, documentId }: DocumentEditorProps) {
       ice: client.ice
     } : { name: "Client Inconnu" };
 
-    await generateDocumentPDF(successDocument, companyProfile, mappedClient, { planTier });
+    await generateDocumentPDF(successDocument, companyProfile, mappedClient, { planTier: subscriptionTier });
   }
 
   // ═══════════════════════════════════════════

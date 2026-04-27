@@ -25,10 +25,10 @@ import { ChevronLeft, Crown, Loader2, Lock, LogIn, LogOut } from "lucide-react";
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { collapsed, isMobile } = useSidebar();
-  const { planTier, setShowUpgradeModal } = usePlan();
+  const { subscriptionTier, setShowUpgradeModal } = usePlan();
 
   const TIER_ORDER: Record<string, number> = { Pro: 1, Business: 2 };
-  const userTierLevel = TIER_ORDER[planTier] ?? 1;
+  const userTierLevel = TIER_ORDER[subscriptionTier] ?? 1;
   const isExpanded = isMobile || !collapsed;
 
   return (
